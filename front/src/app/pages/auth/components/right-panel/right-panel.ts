@@ -1,8 +1,9 @@
 import { Component } from '@angular/core';
+import { Register } from './register/register';
 
 @Component({
   selector: 'app-right-panel',
-  imports: [],
+  imports: [Register],
   templateUrl: './right-panel.html',
   styleUrl: './right-panel.css'
 })
