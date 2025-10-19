@@ -9,18 +9,9 @@ import { CommonModule } from '@angular/common';
   styleUrls: ['./drop-menu.css']
 })
 export class DropdownMenuComponent {
-  isOpen = false;
+  isOpen = true; // Agregar esta propiedad
 
-  toggleDropdown() {
+  toggleSidebar() { // Agregar este método
     this.isOpen = !this.isOpen;
-  }
-
-  closeDropdown() {
-    this.isOpen = false;
-  }
-
-  onOptionClick(option: string) {
-    console.log('Opción seleccionada:', option);
-    this.closeDropdown();
   }
 }
