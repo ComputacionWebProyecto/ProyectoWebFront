@@ -1,11 +1,253 @@
+/* dashboard.css */
 .dashboard-container {
   min-height: 100vh;
   width: 100%;
   background-color: #f5f5f7;
   background-image: radial-gradient(circle, rgba(0, 0, 0, 0.12) 1.5px, transparent 1.5px);
   background-size: 20px 20px;
+}
+
+/* Área del tablero para drag & drop - SIN fondo adicional */
+.board-area {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: calc(100vh - 64px);
+  /* NO hay background aquí, solo hereda del dashboard-container */
+}
+
+/* Componente en el tablero */
+.board-component {
+  position: absolute;
+  cursor: grab;
+  user-select: none;
+  transition: transform 0.1s ease, filter 0.1s ease;
+  z-index: 1;
+}
+
+.board-component:hover {
+  transform: scale(1.05);
+  z-index: 10;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.15));
+}
+
+.board-component:active {
+  cursor: grabbing;
+  transform: scale(1.08);
+  z-index: 20;
+}
+
+/* Durante el arrastre */
+.board-component.dragging {
+  opacity: 0.7;
+  cursor: grabbing;
+  z-index: 100;
+}
+
+/* Contenedores de componentes - SIN fondo */
+.gateway-container,
+.activity-container,
+.event-container {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 2rem;
+  pointer-events: none;
+  background: transparent; /* Asegura que sea transparente */
+}
+
+.gateway-container > *,
+.activity-container > *,
+.event-container > * {
+  pointer-events: auto;
+}
+
+/* Gateways */
+.gateway {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  background: transparent; /* Sin fondo blanco */
+}
+
+.gateway svg {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+  transition: all 0.2s ease;
+}
+
+.board-component:hover .gateway-decision svg path {
+  fill: #BFDBFE;
+  stroke: #2563EB;
+  stroke-width: 3;
+}
+
+.board-component:hover .gateway-parallel svg path {
+  fill: #A7F3D0;
+  stroke: #059669;
+  stroke-width: 3;
+}
+
+.board-component:hover .gateway-parallel svg line {
+  stroke: #059669;
+  stroke-width: 3.5;
+}
+
+.board-component:hover .gateway-exclusive svg path {
+  fill: #FDE68A;
+  stroke: #D97706;
+  stroke-width: 3;
+}
+
+.board-component:hover .gateway-exclusive svg text {
+  fill: #D97706;
+}
+
+/* Tareas (Activities) */
+.task {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+}
+
+.task svg {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+  transition: all 0.2s ease;
+}
+
+.board-component:hover .task-user svg rect {
+  fill: #E0E7FF;
+  stroke: #4F46E5;
+  stroke-width: 2.5;
+}
+
+/* Eventos (Events) */
+.event {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+}
+
+.event svg {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+  transition: all 0.2s ease;
+}
+
+.board-component:hover .event-start svg circle {
+  fill: #A7F3D0;
+  stroke: #059669;
+  stroke-width: 3.5;
+}
+
+/* Etiqueta del componente */
+.component-label {
+  position: absolute;
+  bottom: -25px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.95); /* Semi-transparente para ver los puntos */
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  color: #374151;
+  border: 1px solid #E5E7EB;
+  pointer-events: none;
+  z-index: 5;
+  backdrop-filter: blur(4px); /* Efecto de difuminado */
+}
+
+/* Botón de eliminar */
+.delete-btn {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #EF4444;
+  color: white;
+  border: 2px solid white;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: bold;
+  line-height: 1;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+  z-index: 15;
+}
+
+.board-component:hover .delete-btn {
+  display: flex;
+}
+
+.delete-btn:hover {
+  background: #DC2626;
+  transform: scale(1.1);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+}
+
+.delete-btn:active {
+  transform: scale(0.95);
+}
+
+/* Animación de entrada para componentes nuevos */
+@keyframes componentAppear {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.board-component {
+  animation: componentAppear 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .board-component {
+    transform: scale(0.9);
+  }
+  
+  .board-component:hover {
+    transform: scale(0.95);
+  }
+
+  .component-label {
+    font-size: 10px;
+    padding: 3px 8px;
+  }
+
+  .delete-btn {
+    width: 20px;
+    height: 20px;
+    font-size: 16px;
+  }
+}
+
+/* Prevenir selección de texto durante drag */
+.board-area,
+.board-component {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Transición suave para el layout del dashboard */
+.flex-1 {
+  transition: margin-left 0.3s ease;
 }
