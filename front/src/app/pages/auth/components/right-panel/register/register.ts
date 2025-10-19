@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { User } from '../../../../../models/User';
 import { AuthService } from '../../../../../services/auth.service';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
+import { Registration } from '../../../../../models/Registration';
 
 @Component({
   selector: 'app-register',
@@ -12,23 +14,28 @@ import { CommonModule } from '@angular/common';
   templateUrl: './register.html',
   styleUrl: './register.css'
 })
-export class Register{
+export class Register {
 
   company: Company = new Company(0, '', '');
-  user: User = new User('','','');
+  user: User = new User('', '', '');
 
-  constructor(private authService: AuthService){}
+  constructor(private authService: AuthService, private router: Router) { }
 
   submit() {
-    console.log('Datos empresa:', this.company);
-    console.log('Datos usuario:', this.user);
-    this.authService.registrar(this.company, this.user).subscribe({
-      next: res => console.log('Registro de empresa completado', res),
-      error: err => console.log('Registro fallido', err)
+    const registrationData = new Registration(this.company, this.user);
+
+    this.authService.registrar(registrationData).subscribe({
+      next: (createdUser) => {
+        console.log('Datos de registro', createdUser);
+        this.authService.setUser(createdUser);
+        this.router.navigate(['dashboard']);
+      },
+      error: (err) => {
+        alert(err.error?.message || 'Error desconocido');
+      }
     });
-
-
   }
+
 
 
 }
