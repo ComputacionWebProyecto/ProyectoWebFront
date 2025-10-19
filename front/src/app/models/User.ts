@@ -1,14 +1,14 @@
 export class User{
 
     public id?: number;
-    public name: string;
+    public nombre: string;
     public correo: string;
     public contrasena: string;
     public companyId?: number;
     public roleId?: number;
 
-    constructor(name: string, correo: string, contrasena: string, id?: number, companyId?: number, roleId?: number){
-        this.name = name;
+    constructor(nombre: string, correo: string, contrasena: string, companyId?: number, roleId?: number, id?: number){
+        this.nombre = nombre;
         this.correo = correo;
         this.contrasena = contrasena;
         this.id = id;

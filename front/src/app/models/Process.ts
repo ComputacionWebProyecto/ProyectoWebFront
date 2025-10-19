@@ -4,7 +4,7 @@ export class Process{
     public description: string;
     public companyId?: number;
 
-    constructor(name: string, description: string, id?: number, companyId?: number){
+    constructor(name: string, description: string, companyId?: number, id?: number){
         this.name = name;
         this.description = description;
         this.id = id;

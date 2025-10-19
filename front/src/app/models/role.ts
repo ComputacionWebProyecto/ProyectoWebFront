@@ -4,14 +4,12 @@ export class Role{
     public nombre: string;
     public descripcion: string;
     public companyId?: number;
-    public processId?: number;
 
-    constructor(nombre: string, descripcion: string, status: string, id?: number, companyId?: number, processId?: number){
+    constructor(nombre: string, descripcion: string, companyId?: number, id?: number){
         this.nombre = nombre;
         this.descripcion = descripcion;
         this.id = id;
-        this.companyId;
-        this.processId = processId;
+        this.companyId = companyId;
     }
 
 
