@@ -1,11 +1,12 @@
 // drop-menu.ts
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { GatewayComponent } from "../gateway/gateway";
 
 @Component({
   selector: 'app-drop-menu',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, GatewayComponent],
   templateUrl: './drop-menu.html',
   styleUrls: ['./drop-menu.css']
 })
@@ -36,3 +37,4 @@ export class DropdownMenuComponent {
     // Aquí puedes emitir un evento al componente padre o manejar la lógica
   }
 }
+
