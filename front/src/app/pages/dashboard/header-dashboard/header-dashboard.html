@@ -1,5 +1,17 @@
-<header class="fixed top-0 left-0 w-full z-50 bg-gray-900 text-white flex items-center justify-between px-6 py-3 shadow-md">  <!-- Lado Izquierdo: Logo + Nombre -->
+<!-- header-dashboard.html -->
+<header class="fixed top-0 left-0 w-full z-50 bg-gray-900 text-white flex items-center justify-between px-6 py-3 shadow-md">
+  
+  <!-- Lado Izquierdo: Botón Hamburguesa + Logo + Nombre -->
   <div class="flex items-center space-x-3">
+    <!-- Botón hamburguesa -->
+    <button
+      (click)="onToggleSidebar()"
+      class="p-2 rounded-lg hover:bg-gray-800 transition-colors mr-2">
+      <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+      </svg>
+    </button>
+
     <img src="images/prueba.png" alt="Logo" class="w-10 h-10 rounded-full">
     <h1 class="text-xl font-semibold tracking-wide">404 NOT FOUND</h1>
   </div>
@@ -19,4 +31,3 @@
     </button>
   </div>
 </header>
-

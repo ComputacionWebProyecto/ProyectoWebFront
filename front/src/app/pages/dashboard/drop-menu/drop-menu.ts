@@ -1,17 +1,14 @@
-import { Component } from '@angular/core';
+// drop-menu.ts
+import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 @Component({
-  selector: 'app-dropdown-menu',
+  selector: 'app-drop-menu',
   standalone: true,
   imports: [CommonModule],
   templateUrl: './drop-menu.html',
   styleUrls: ['./drop-menu.css']
 })
 export class DropdownMenuComponent {
-  isOpen = true; // Agregar esta propiedad
-
-  toggleSidebar() { // Agregar este método
-    this.isOpen = !this.isOpen;
-  }
+  @Input() isOpen = true; // Recibe el estado desde el padre
 }
