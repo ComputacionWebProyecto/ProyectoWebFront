@@ -8,7 +8,7 @@ import { Router } from '@angular/router';
 @Component({
   selector: 'app-drop-menu',
   standalone: true,
-  imports: [CommonModule, GatewayComponent],
+  imports: [CommonModule],
   templateUrl: './drop-menu.html',
   styleUrls: ['./drop-menu.css']
 })

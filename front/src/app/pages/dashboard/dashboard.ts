@@ -105,61 +105,48 @@ export class Dashboard implements OnInit {
   }
 
   addComponentToBoard(type: string, category: string, x: number, y: number): void {
-    const newComponent: BoardComponent = {
-      id: `component-${this.componentCounter++}`,
-      type,
-      category,
-      x: x - 30,
-      y: y - 30,
-      label: this.getComponentLabel(type)
-    };
+  const newGateway: Gateway = {
+    type: 'exclusive-gateway', // por ahora solo uno
+    status: 'active',
+    x: x - 30,
+    y: y - 30
+  };
 
-    if (category === 'gateway') {
-      const gateway: Gateway = {
-        type,
-        status: 'active',
-        x: newComponent.x,
-        y: newComponent.y
-      };
+    this.gatewayService.createGateway(newGateway).subscribe({
+      next: (savedGateway: Gateway) => {
+        console.log('Gateway guardado:', savedGateway);
 
-      this.gatewayService.createGateway(gateway).subscribe({
-        next: (savedGateway: Gateway) => {
-          if (savedGateway?.id) {
-            newComponent.gatewayId = savedGateway.id;
-            newComponent.id = `gateway-${savedGateway.id}`;
-          }
-          this.boardComponents.push(newComponent);
-          console.log('Gateway guardado:', savedGateway);
-        },
-        error: (error: any) => {
-          console.error('Error al guardar gateway:', error);
-          this.boardComponents.push(newComponent);
-        }
-      });
-    } else {
-      this.boardComponents.push(newComponent);
-    }
+        this.boardComponents.push({
+          id: `gateway-${savedGateway.id}`,
+          type: savedGateway.type,
+          category: 'gateway',
+          x: savedGateway.x!,
+          y: savedGateway.y!,
+          label: 'Gateway',
+          gatewayId: savedGateway.id
+        });
+      },
+      error: (error: any) => {
+        console.error('Error al guardar gateway:', error);
+      }
+    });
   }
 
   updateGatewayPosition(component: BoardComponent): void {
-    if (!component.gatewayId) return;
+    if (component.gatewayId) {
+      const gateway: Gateway = {
+        id: component.gatewayId,
+        type: component.type,
+        status: 'active',
+        x: component.x,
+        y: component.y
+      };
 
-    const gateway: Gateway = {
-      id: component.gatewayId,
-      type: component.type,
-      status: 'active',
-      x: component.x,
-      y: component.y
-    };
-
-    this.gatewayService.updateGateway(component.gatewayId, gateway).subscribe({
-      next: () => {
-        console.log('Posición de gateway actualizada');
-      },
-      error: (error: any) => {
-        console.error('Error al actualizar posición:', error);
-      }
-    });
+      this.gatewayService.updateGateway(component.gatewayId, gateway).subscribe({
+        next: () => console.log('Posición actualizada'),
+        error: (error: any) => console.error('Error al actualizar posición:', error)
+      });
+    }
   }
 
   getComponentLabel(type: string): string {
