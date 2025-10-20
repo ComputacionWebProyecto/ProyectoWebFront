@@ -1,7 +1,10 @@
 <!-- dashboard.html -->
 <div class="flex h-screen overflow-hidden">
   <!-- Sidebar -->
-  <app-drop-menu [isOpen]="isSidebarOpen"></app-drop-menu>
+  <app-drop-menu 
+    [isOpen]="isSidebarOpen"
+    (componentSelected)="onComponentSelected($event)">
+  </app-drop-menu>
 
   <!-- Contenido principal -->
   <div class="flex-1 flex flex-col">
@@ -16,10 +19,110 @@
     <app-process-panel [isOpen]="isProcessPanelOpen"></app-process-panel>
 
     <!-- Contenido del dashboard con padding-top para compensar el header fijo -->
-    <main class="flex-1 overflow-y-auto dashboard-container pt-16">
-      <div class="w-full max-w-7xl mx-auto p-6">
-        <!-- Tu contenido aquí -->
-      
+    <main class="flex-1 overflow-hidden pt-16">
+      <!-- Área del tablero para drag & drop -->
+      <div 
+        class="board-area dashboard-container h-full w-full relative"
+        (drop)="onBoardDrop($event)"
+        (dragover)="onBoardDragOver($event)">
+
+        <!-- Componentes renderizados en el tablero -->
+        <div 
+          *ngFor="let component of boardComponents"
+          class="board-component absolute"
+          [style.left.px]="component.x"
+          [style.top.px]="component.y"
+          [attr.data-type]="component.type"
+          draggable="true"
+          (dragstart)="onComponentDragStart($event, component)"
+          (dragend)="onComponentDragEnd($event)">
+          
+          <!-- Renderizado según el tipo de componente -->
+          <div [ngSwitch]="component.category">
+            
+            <!-- Gateways -->
+            <div *ngSwitchCase="'gateway'" class="gateway-container">
+              <div [ngSwitch]="component.type">
+                <!-- Gateway de Decisión -->
+                <div *ngSwitchCase="'decision-gateway'" class="gateway gateway-decision">
+                  <svg width="60" height="60" viewBox="0 0 60 60">
+                    <path d="M30 5 L55 30 L30 55 L5 30 Z" 
+                          fill="#DBEAFE" 
+                          stroke="#3B82F6" 
+                          stroke-width="2.5"/>
+                    <text x="30" y="38" text-anchor="middle" font-size="22" font-weight="bold" fill="#3B82F6">?</text>
+                  </svg>
+                  <div class="component-label">{{ component.label }}</div>
+                </div>
+                
+                <!-- Gateway Paralelo -->
+                <div *ngSwitchCase="'parallel-gateway'" class="gateway gateway-parallel">
+                  <svg width="60" height="60" viewBox="0 0 60 60">
+                    <path d="M30 5 L55 30 L30 55 L5 30 Z" 
+                          fill="#D1FAE5" 
+                          stroke="#10B981" 
+                          stroke-width="2.5"/>
+                    <line x1="30" y1="15" x2="30" y2="45" stroke="#10B981" stroke-width="3"/>
+                    <line x1="15" y1="30" x2="45" y2="30" stroke="#10B981" stroke-width="3"/>
+                  </svg>
+                  <div class="component-label">{{ component.label }}</div>
+                </div>
+                
+                <!-- Gateway Exclusivo -->
+                <div *ngSwitchCase="'exclusive-gateway'" class="gateway gateway-exclusive">
+                  <svg width="60" height="60" viewBox="0 0 60 60">
+                    <path d="M30 5 L55 30 L30 55 L5 30 Z" 
+                          fill="#FEF3C7" 
+                          stroke="#F59E0B" 
+                          stroke-width="2.5"/>
+                    <text x="30" y="40" text-anchor="middle" font-size="26" font-weight="bold" fill="#F59E0B">X</text>
+                  </svg>
+                  <div class="component-label">{{ component.label }}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Activity (Tareas) -->
+            <div *ngSwitchCase="'activity'" class="activity-container">
+              <div *ngIf="component.type === 'task-user'" class="task task-user">
+                <svg width="100" height="60" viewBox="0 0 100 60">
+                  <rect x="2" y="2" width="96" height="56" rx="5" 
+                        fill="#EEF2FF" 
+                        stroke="#6366F1" 
+                        stroke-width="2"/>
+                  <svg x="10" y="15" width="20" height="20" viewBox="0 0 24 24">
+                    <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" 
+                          fill="#6366F1"/>
+                  </svg>
+                  <text x="40" y="35" font-size="12" fill="#4338CA">Usuario</text>
+                </svg>
+                <div class="component-label">{{ component.label }}</div>
+              </div>
+            </div>
+
+            <!-- Edge (Eventos) -->
+            <div *ngSwitchCase="'edge'" class="event-container">
+              <div *ngIf="component.type === 'event-start'" class="event event-start">
+                <svg width="50" height="50" viewBox="0 0 50 50">
+                  <circle cx="25" cy="25" r="22" 
+                          fill="#D1FAE5" 
+                          stroke="#10B981" 
+                          stroke-width="3"/>
+                  <text x="25" y="32" text-anchor="middle" font-size="20" fill="#10B981">▶</text>
+                </svg>
+                <div class="component-label">{{ component.label }}</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Botón para eliminar -->
+          <button 
+            class="delete-btn"
+            (click)="removeComponent(component.id)"
+            title="Eliminar componente">
+            ×
+          </button>
+        </div>
       </div>
     </main>
   </div>

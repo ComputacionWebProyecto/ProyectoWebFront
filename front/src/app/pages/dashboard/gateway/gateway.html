@@ -1,1 +1,7 @@
-<p>gateway works!</p>
+<div
+  class="absolute flex items-center justify-center w-16 h-16 border-4 border-orange-500 bg-white transform rotate-45 cursor-move select-none shadow-lg"
+  [style.left.px]="x"
+  [style.top.px]="y"
+  (mousedown)="startDrag($event)">
+  <span class="text-orange-500 font-bold transform -rotate-45 text-xl">X</span>
+</div>
