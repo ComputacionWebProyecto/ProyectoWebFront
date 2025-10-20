@@ -1,4 +1,3 @@
-// models/Gateway.ts
 export interface Gateway {
   id?: number;
   status?: string;
