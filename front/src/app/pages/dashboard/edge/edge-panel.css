@@ -1,0 +1,29 @@
+/* Panel base */
+.panel { @apply bg-white rounded-2xl shadow p-4; }
+.panel-title { @apply text-lg font-semibold mb-3; }
+
+/* Formulario */
+.form .row { @apply mb-3; }
+.form label { @apply block text-sm font-medium mb-1; }
+.form input { @apply w-full border rounded-md px-3 py-2 outline-none; }
+
+/* Acciones */
+.actions { @apply flex gap-2; }
+.actions button { @apply px-3 py-2 rounded-md bg-blue-600 text-white; }
+/* No se puede usar @apply hover:...; usa una regla normal */
+.actions button:hover { opacity: .9; }
+
+/* Botón “Cancelar” (si lo usas) */
+.actions button[type="button"] { @apply bg-gray-500; }
+
+/* Lista: reemplazo de divide-y */
+.list { /* opcional: margen superior */ }
+.list > li { @apply border-b border-gray-200; }
+.list > li:last-child { border-bottom-width: 0; }
+
+.item-main { @apply py-2; }
+.item-actions { @apply flex gap-2 pb-2; }
+.muted { @apply text-gray-500; }
+
+/* Errores */
+.error { @apply text-red-600 text-xs; }

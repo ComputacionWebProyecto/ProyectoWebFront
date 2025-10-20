@@ -1,0 +1,53 @@
+/* Panel / título */
+.panel { @apply bg-white dark:bg-slate-900 rounded-2xl shadow p-5 border border-slate-200 dark:border-slate-800; }
+.panel-title { @apply text-lg font-semibold mb-4; }
+
+/* Formulario */
+.form { @apply space-y-3; }
+.form .row { @apply grid gap-1; }
+.form label { @apply block text-sm font-medium text-slate-700 dark:text-slate-300; }
+
+/* Inputs base (input / select / textarea) */
+.form input,
+.form select,
+.form textarea {
+  @apply w-full rounded-md px-3 py-2
+         border border-slate-300 dark:border-slate-700
+         bg-white dark:bg-slate-900
+         text-slate-900 dark:text-slate-100
+         shadow-sm transition
+         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500;
+}
+
+/* Placeholder más suave */
+.form input::placeholder,
+.form textarea::placeholder {
+  @apply text-slate-400;
+}
+
+/* Estado inválido (Angular agrega estas clases) */
+.form input.ng-invalid.ng-touched,
+.form select.ng-invalid.ng-touched,
+.form textarea.ng-invalid.ng-touched {
+  @apply border-red-500;
+}
+
+.error { @apply text-red-600 text-xs mt-1; }
+
+/* Acciones */
+.actions { @apply flex gap-2 pt-2; }
+.actions button {
+  @apply inline-flex items-center gap-2
+         px-3 py-2 rounded-md text-sm font-medium
+         bg-blue-600 text-white hover:bg-blue-700
+         transition
+         disabled:opacity-50 disabled:cursor-not-allowed;
+}
+.actions button[type="button"] { @apply bg-slate-600 hover:bg-slate-700; }
+
+/* Lista */
+.list { @apply divide-y divide-slate-200 dark:divide-slate-800 mt-4; }
+.list li { @apply flex items-center justify-between; }
+.item-main { @apply py-2 min-w-0; }
+.item-actions { @apply flex gap-2 pb-2 shrink-0; }
+.muted { @apply text-slate-500 dark:text-slate-400; }

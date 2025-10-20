@@ -1,0 +1,70 @@
+<section class="panel">
+  <h2 class="panel-title">Edges</h2>
+
+  <form [formGroup]="form" (ngSubmit)="submit()" class="form">
+    <div class="row">
+      <label>Proceso (opcional)</label>
+      <input
+        type="number"
+        formControlName="processId"
+        placeholder="Ej: 10"
+        min="1"
+      />
+    </div>
+
+    <div class="row">
+      <label>Desde (Activity ID)</label>
+      <input
+        type="number"
+        formControlName="activitySourceId"
+        placeholder="Ej: 1"
+        min="1"
+      />
+      <small class="error"
+        *ngIf="form.get('activitySourceId')?.invalid && form.get('activitySourceId')?.touched">
+        Requerido (>= 1)
+      </small>
+    </div>
+
+    <div class="row">
+      <label>Hacia (Activity ID)</label>
+      <input
+        type="number"
+        formControlName="activityDestinyId"
+        placeholder="Ej: 2"
+        min="1"
+      />
+      <small class="error"
+        *ngIf="form.get('activityDestinyId')?.invalid && form.get('activityDestinyId')?.touched">
+        Requerido (>= 1)
+      </small>
+    </div>
+
+    <div class="row">
+      <label>Etiqueta</label>
+      <input formControlName="label" placeholder="Condición/Nombre del flujo" />
+    </div>
+
+    <div class="actions">
+      <button type="submit" [disabled]="form.invalid">
+        {{ editingId() ? 'Actualizar' : 'Crear' }}
+      </button>
+      <button type="button" *ngIf="editingId()" (click)="cancel()">Cancelar</button>
+    </div>
+  </form>
+
+  <ul class="list">
+    <li *ngFor="let e of (edges$ | async)">
+      <div class="item-main">
+        <strong>#{{ e.id }}</strong>
+        <span class="muted">&nbsp;{{ e.activitySourceId }} → {{ e.activityDestinyId }}</span>
+        <span class="muted" *ngIf="e.processId">&nbsp;(proc: {{ e.processId }})</span>
+        <span class="muted" *ngIf="e.label">&nbsp;— {{ e.label }}</span>
+      </div>
+      <div class="item-actions">
+        <button (click)="edit(e)">Editar</button>
+        <button (click)="remove(e.id!)">Eliminar</button>
+      </div>
+    </li>
+  </ul>
+</section>

@@ -1,0 +1,38 @@
+<section class="panel">
+  <h2 class="panel-title">Activities</h2>
+
+  <form [formGroup]="form" (ngSubmit)="submit()" class="form">
+    <div class="row">
+      <label>Nombre</label>
+      <input formControlName="name" placeholder="Nombre de la actividad" />
+      <small class="error" *ngIf="form.get('name')?.invalid && form.get('name')?.touched">
+        Requerido (mínimo 2 caracteres)
+      </small>
+    </div>
+
+    <div class="row">
+      <label>Descripción</label>
+      <input formControlName="description" placeholder="Descripción (opcional)" />
+    </div>
+
+    <div class="actions">
+      <button type="submit" [disabled]="form.invalid">
+        {{ editingId() ? 'Actualizar' : 'Crear' }}
+      </button>
+      <button type="button" *ngIf="editingId()" (click)="cancel()">Cancelar</button>
+    </div>
+  </form>
+
+  <ul class="list">
+    <li *ngFor="let a of (activities$ | async)">
+      <div class="item-main">
+        <strong>{{ a.name }}</strong>
+        <span class="muted" *ngIf="a.description">&nbsp;— {{ a.description }}</span>
+      </div>
+      <div class="item-actions">
+        <button (click)="edit(a)">Editar</button>
+        <button (click)="remove(a.id!)">Eliminar</button>
+      </div>
+    </li>
+  </ul>
+</section>
