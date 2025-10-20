@@ -8,8 +8,12 @@
     <!-- Header fijo -->
     <app-header-dashboard 
       [isSidebarOpen]="isSidebarOpen"
-      (toggleSidebar)="toggleSidebar()">
+      (toggleSidebar)="toggleSidebar()"
+      (toggleProcesses)="isProcessPanelOpen = !isProcessPanelOpen">
     </app-header-dashboard>
+
+    <!-- Panel lateral derecho -->
+    <app-process-panel [isOpen]="isProcessPanelOpen"></app-process-panel>
 
     <!-- Contenido del dashboard con padding-top para compensar el header fijo -->
     <main class="flex-1 overflow-y-auto dashboard-container pt-16">
