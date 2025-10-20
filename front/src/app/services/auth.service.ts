@@ -33,6 +33,16 @@ export class AuthService {
     );
   }
 
+  login(credentials: { correo: string, contrasena: string }): Observable<User> {
+  return this.http.post<User>('http://localhost:8080/api/login', credentials).pipe(
+    tap((user: User) => {
+      // Guardar usuario en localStorage
+      if (isPlatformBrowser(this.platformId)) {
+        localStorage.setItem('user', JSON.stringify(user));
+      }
+    })
+  );
+}
 
   setUser(user: User) {
     if (isPlatformBrowser(this.platformId)) {
