@@ -2,6 +2,8 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { GatewayComponent } from "../gateway/gateway";
+import { AuthService } from '../../../services/auth.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-drop-menu',
@@ -13,6 +15,13 @@ import { GatewayComponent } from "../gateway/gateway";
 export class DropdownMenuComponent {
   @Input() isOpen = true;
   @Output() componentSelected = new EventEmitter<{type: string, category: string}>();
+
+  constructor(private authService: AuthService, private router: Router){}
+
+  logout(){
+    this.authService.logout();
+    this.router.navigate(['auth']);
+  }
 
   // Estado de los submenús
   isGatewayOpen = false;
