@@ -70,23 +70,26 @@ export class Dashboard implements OnInit {
     });
   }
 
-  // NUEVO: se llama desde (toggleRoles) del header
-  onToggleRoles(): void {
-    // si no quieres dos paneles abiertos a la vez, cierra el de procesos:
-    // this.isProcessPanelOpen = false;
+  onToggleRoles() {
     this.isRolePanelOpen = !this.isRolePanelOpen;
+    if(this.isUserPanelOpen || this.isProcessPanelOpen){
+      this.isUserPanelOpen = false;
+      this.isProcessPanelOpen = false;
+    }
   }
 
   toggleProcessPanel() { 
     this.isProcessPanelOpen = !this.isProcessPanelOpen;
-    if(this.isUserPanelOpen){
+    if(this.isUserPanelOpen || this.isRolePanelOpen){
       this.isUserPanelOpen = false;
-    }
+      this.isRolePanelOpen = false;
+    } 
   }
   toggleUserPanel(){
     this.isUserPanelOpen = !this.isUserPanelOpen;
-    if(this.isProcessPanelOpen){
+    if(this.isProcessPanelOpen || this.isRolePanelOpen){
       this.isProcessPanelOpen = false;
+      this.isRolePanelOpen = false;
     }
   }
 
