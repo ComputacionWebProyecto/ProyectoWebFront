@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs/internal/Observable';
 import { Role } from '../models/Role';
+import { BackendRoleResponse } from '../models/BackendRoleResponse';
 
 @Injectable({
   providedIn: 'root'
@@ -30,6 +31,10 @@ export class RoleService {
   }
 
   deleteRole(id: number): Observable<any> {
-    return this.http.patch(`${this.baseUrl}/${id}`, { status: 'inactive' });
+    return this.http.delete(`${this.baseUrl}/${id}`);
+  }
+
+  getRolesByCompanyId(id: number): Observable<BackendRoleResponse[]>{
+    return this.http.get<BackendRoleResponse[]>(`${this.baseUrl}/company/${id}`);
   }
 }

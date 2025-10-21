@@ -27,6 +27,7 @@
 
     <ng-template #formTemplate>
         <app-user-form
+        (onSave)="saveUser($event)"
         (onCancel)="cancelCreate()"></app-user-form>
     </ng-template>
   </div>
