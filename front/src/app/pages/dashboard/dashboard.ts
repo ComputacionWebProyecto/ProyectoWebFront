@@ -15,6 +15,15 @@ interface BoardComponent {
   gatewayId?: number;
 }
 
+interface BoardComponent {
+  id: string;
+  type: string;
+  category: string;
+  x: number;
+  y: number;
+  label?: string;
+}
+
 @Component({
   selector: 'app-dashboard',
   standalone: true,

@@ -36,56 +36,27 @@
           <!-- Renderizado según el tipo de componente -->
           <div [ngSwitch]="component.category">
             
-            <!-- GATEWAYS -->
+            <!-- SOLO GATEWAY DE DECISIÓN -->
             <div *ngSwitchCase="'gateway'" class="gateway-container">
-              <div [ngSwitch]="component.type">
-                
-                <!-- Gateway de Decisión -->
-                <div *ngSwitchCase="'decision-gateway'" class="gateway gateway-decision">
-                  <svg width="60" height="60" viewBox="0 0 60 60">
-                    <path 
-                      d="M30 5 L55 30 L30 55 L5 30 Z" 
-                      fill="#DBEAFE" 
-                      stroke="#3B82F6" 
-                      stroke-width="2.5"
-                    />
-                    <text 
-                      x="30" 
-                      y="38" 
-                      text-anchor="middle" 
-                      font-size="22" 
-                      font-weight="bold" 
-                      fill="#3B82F6">
-                      ?
-                    </text>
-                  </svg>
-                  <div class="component-label">{{ component.label }}</div>
-                </div>
-
-                <!-- Gateway Paralelo -->
-                <div *ngSwitchCase="'parallel-gateway'" class="gateway gateway-parallel">
-                  <svg width="60" height="60" viewBox="0 0 60 60">
-                    <path d="M30 5 L55 30 L30 55 L5 30 Z" 
-                          fill="#D1FAE5" 
-                          stroke="#10B981" 
-                          stroke-width="2.5"/>
-                    <line x1="30" y1="15" x2="30" y2="45" stroke="#10B981" stroke-width="3"/>
-                    <line x1="15" y1="30" x2="45" y2="30" stroke="#10B981" stroke-width="3"/>
-                  </svg>
-                  <div class="component-label">{{ component.label }}</div>
-                </div>
-                
-                <!-- Gateway Exclusivo -->
-                <div *ngSwitchCase="'exclusive-gateway'" class="gateway gateway-exclusive">
-                  <svg width="60" height="60" viewBox="0 0 60 60">
-                    <path d="M30 5 L55 30 L30 55 L5 30 Z" 
-                          fill="#FEF3C7" 
-                          stroke="#F59E0B" 
-                          stroke-width="2.5"/>
-                    <text x="30" y="40" text-anchor="middle" font-size="26" font-weight="bold" fill="#F59E0B">X</text>
-                  </svg>
-                  <div class="component-label">{{ component.label }}</div>
-                </div>
+              <div class="gateway gateway-decision">
+                <svg width="60" height="60" viewBox="0 0 60 60">
+                  <path 
+                    d="M30 5 L55 30 L30 55 L5 30 Z" 
+                    fill="#DBEAFE" 
+                    stroke="#3B82F6" 
+                    stroke-width="2.5"
+                  />
+                  <text 
+                    x="30" 
+                    y="38" 
+                    text-anchor="middle" 
+                    font-size="22" 
+                    font-weight="bold" 
+                    fill="#3B82F6">
+                    ?
+                  </text>
+                </svg>
+                <div class="component-label">{{ component.label }}</div>
               </div>
             </div>
 
