@@ -1,37 +1,69 @@
-<section class="panel">
-  <h2 class="panel-title">Activities</h2>
+<section class="panel" aria-labelledby="activity-title">
+  <!-- Título + botón cerrar -->
+  <div class="flex items-center justify-between mb-4">
+    <h2 id="activity-title" class="panel-title">Activities</h2>
 
-  <form [formGroup]="form" (ngSubmit)="submit()" class="form">
+    <!-- Botón cerrar (emite close) -->
+    <button
+      type="button"
+      (click)="onClose()"
+      aria-label="Cerrar panel"
+      class="rounded-md p-2
+             text-slate-500 hover:text-slate-900
+             dark:text-slate-300 dark:hover:text-white
+             hover:bg-slate-100 dark:hover:bg-slate-800">
+      &times;
+    </button>
+  </div>
+
+  <!-- Formulario -->
+  <form [formGroup]="form" (ngSubmit)="submit()" class="form" novalidate>
     <div class="row">
-      <label>Nombre</label>
-      <input formControlName="name" placeholder="Nombre de la actividad" />
-      <small class="error" *ngIf="form.get('name')?.invalid && form.get('name')?.touched">
-        Requerido (mínimo 2 caracteres)
+      <label for="name">Nombre</label>
+      <input
+        id="name"
+        formControlName="name"
+        placeholder="Nombre de la actividad"
+        required
+        aria-required="true" />
+
+      <small class="error" *ngIf="form.get('name')?.touched && form.get('name')?.errors as e">
+        <ng-container *ngIf="e['required']">Requerido.</ng-container>
+        <ng-container *ngIf="e['minlength']">
+          Mínimo {{ e['minlength'].requiredLength }} caracteres.
+        </ng-container>
       </small>
     </div>
 
     <div class="row">
-      <label>Descripción</label>
-      <input formControlName="description" placeholder="Descripción (opcional)" />
+      <label for="description">Descripción</label>
+      <input
+        id="description"
+        formControlName="description"
+        placeholder="Descripción (opcional)" />
     </div>
 
     <div class="actions">
       <button type="submit" [disabled]="form.invalid">
         {{ editingId() ? 'Actualizar' : 'Crear' }}
       </button>
-      <button type="button" *ngIf="editingId()" (click)="cancel()">Cancelar</button>
+
+      <button type="button" *ngIf="editingId()" (click)="cancel()">
+        Cancelar
+      </button>
     </div>
   </form>
 
+  <!-- Lista de actividades -->
   <ul class="list">
     <li *ngFor="let a of (activities$ | async)">
       <div class="item-main">
-        <strong>{{ a.name }}</strong>
+        <strong class="block truncate">{{ a.name }}</strong>
         <span class="muted" *ngIf="a.description">&nbsp;— {{ a.description }}</span>
       </div>
       <div class="item-actions">
-        <button (click)="edit(a)">Editar</button>
-        <button (click)="remove(a.id!)">Eliminar</button>
+        <button type="button" (click)="edit(a)">Editar</button>
+        <button type="button" (click)="remove(a.id!)">Eliminar</button>
       </div>
     </li>
   </ul>

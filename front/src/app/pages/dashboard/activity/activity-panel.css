@@ -1,53 +1,99 @@
-/* Panel / título */
-.panel { @apply bg-white dark:bg-slate-900 rounded-2xl shadow p-5 border border-slate-200 dark:border-slate-800; }
-.panel-title { @apply text-lg font-semibold mb-4; }
+/* Contenedor del panel */
+.panel {
+  position: relative;
+  background: #0b1220;
+  border: 1px solid #1f2a44;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 8px 30px rgba(0,0,0,.35);
+  color: #e5e7eb;
+}
+
+/* Título */
+.panel-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #e5e7eb;
+}
 
 /* Formulario */
-.form { @apply space-y-3; }
-.form .row { @apply grid gap-1; }
-.form label { @apply block text-sm font-medium text-slate-700 dark:text-slate-300; }
+.form { display: grid; gap: 12px; }
+.form .row { display: grid; gap: 6px; }
 
-/* Inputs base (input / select / textarea) */
+/* Labels */
+.form label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #cbd5e1;
+}
+
+/* Inputs base */
 .form input,
 .form select,
 .form textarea {
-  @apply w-full rounded-md px-3 py-2
-         border border-slate-300 dark:border-slate-700
-         bg-white dark:bg-slate-900
-         text-slate-900 dark:text-slate-100
-         shadow-sm transition
-         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500;
+  width: 100%;
+  border-radius: 10px;
+  padding: 10px 12px;
+  border: 1px solid #2a3345;
+  outline: none;
+  background: #121a2b;
+  color: #e5e7eb;
+  transition: box-shadow .15s, border-color .15s;
 }
 
-/* Placeholder más suave */
 .form input::placeholder,
 .form textarea::placeholder {
-  @apply text-slate-400;
+  color: #94a3b8;
 }
 
-/* Estado inválido (Angular agrega estas clases) */
-.form input.ng-invalid.ng-touched,
-.form select.ng-invalid.ng-touched,
-.form textarea.ng-invalid.ng-touched {
-  @apply border-red-500;
+.form input:focus,
+.form select:focus,
+.form textarea:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59,130,246,.25);
 }
 
-.error { @apply text-red-600 text-xs mt-1; }
+/* Errores */
+.error { color: #ef4444; font-size: 0.75rem; }
 
 /* Acciones */
-.actions { @apply flex gap-2 pt-2; }
+.actions { display: flex; gap: 8px; padding-top: 6px; }
 .actions button {
-  @apply inline-flex items-center gap-2
-         px-3 py-2 rounded-md text-sm font-medium
-         bg-blue-600 text-white hover:bg-blue-700
-         transition
-         disabled:opacity-50 disabled:cursor-not-allowed;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  background: #1d4ed8; 
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 600;
 }
-.actions button[type="button"] { @apply bg-slate-600 hover:bg-slate-700; }
+.actions button[disabled] { opacity: .5; cursor: not-allowed; }
+.actions button[type="button"] { background: #475569; }
 
 /* Lista */
-.list { @apply divide-y divide-slate-200 dark:divide-slate-800 mt-4; }
-.list li { @apply flex items-center justify-between; }
-.item-main { @apply py-2 min-w-0; }
-.item-actions { @apply flex gap-2 pb-2 shrink-0; }
-.muted { @apply text-slate-500 dark:text-slate-400; }
+.list { margin-top: 10px; border-top: 1px solid #1f2937; }
+.list li { display: flex; align-items: center; justify-content: space-between; }
+.item-main { padding: 8px 0; min-width: 0; }
+.item-actions { display: flex; gap: 10px; padding-bottom: 8px; }
+.muted { color: #94a3b8; }
+
+/* Botón cerrar (X) */
+.panel-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  border: 1px solid #243044;
+  background: #0f172a;
+  color: #cbd5e1;
+  cursor: pointer;
+  line-height: 26px;
+}
+.panel-close:hover { background: #111827; }

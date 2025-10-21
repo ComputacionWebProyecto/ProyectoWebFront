@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, EventEmitter, Output, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Observable } from 'rxjs';
@@ -14,18 +14,28 @@ import { ActivityService } from '../../../services/activity.service';
   styleUrls: ['./activity-panel.css'],
 })
 export class ActivityPanel {
+  /** Permite que el padre oculte el panel al hacer clic en la “X” */
+  @Output() close = new EventEmitter<void>();
+
   private fb = inject(FormBuilder);
   private service = inject(ActivityService);
 
+  /** Stream de actividades (solo lectura) */
   readonly activities$: Observable<Activity[]> = this.service.list$;
 
-  // Estado de edición
+  /** Estado de edición */
   readonly isEditing = signal(false);
   readonly selected = signal<Activity | null>(null);
 
-  // Form: evita nulls; processId/roleId permiten undefined (NO null)
+  /**
+   * Formulario
+   * Nota: para los opcionales usamos `number | undefined` (NO null).
+   */
   readonly form = this.fb.group({
-    name: this.fb.control('', { nonNullable: true, validators: [Validators.required, Validators.minLength(2)] }),
+    name: this.fb.control('', {
+      nonNullable: true,
+      validators: [Validators.required, Validators.minLength(2)],
+    }),
     description: this.fb.control('', { nonNullable: true }),
     x: this.fb.control(100, { nonNullable: true }),
     y: this.fb.control(100, { nonNullable: true }),
@@ -35,12 +45,12 @@ export class ActivityPanel {
     roleId: this.fb.control<number | undefined>(undefined, { nonNullable: true }),
   });
 
-  /** Usado por el template para decidir “Crear vs Actualizar” */
+  /** Devuelve el id si está editando (para el botón Crear/Actualizar) */
   editingId(): number | undefined {
     return this.selected()?.id ?? undefined;
   }
 
-  /** Handler del (ngSubmit) del formulario */
+  /** (ngSubmit) del formulario */
   submit(): void {
     this.editingId() ? this.update() : this.create();
   }
@@ -48,6 +58,7 @@ export class ActivityPanel {
   /** Crear nueva actividad */
   private create(): void {
     if (!this.form.valid) return;
+
     const raw = this.form.getRawValue();
     const payload: Omit<Activity, 'id'> = {
       name: raw.name,
@@ -56,16 +67,18 @@ export class ActivityPanel {
       y: raw.y,
       width: raw.width,
       height: raw.height,
-      processId: raw.processId, // undefined OK
-      roleId: raw.roleId,       // undefined OK
+      processId: raw.processId, // `undefined` permitido
+      roleId: raw.roleId,       // `undefined` permitido
     };
+
     this.service.create(payload).subscribe(() => this.resetForm());
   }
 
-  /** Poner el form en modo edición con los datos del item */
+  /** Cargar datos en el form para editar */
   edit(item: Activity): void {
     this.isEditing.set(true);
     this.selected.set(item);
+
     this.form.patchValue({
       name: item.name ?? '',
       description: item.description ?? '',
@@ -78,7 +91,7 @@ export class ActivityPanel {
     });
   }
 
-  /** Actualizar actividad seleccionada */
+  /** Actualizar la actividad seleccionada */
   private update(): void {
     const current = this.selected();
     if (!current || !this.form.valid) return;
@@ -111,7 +124,12 @@ export class ActivityPanel {
     this.resetForm();
   }
 
-  /** Reset a estado inicial */
+  /** Emitir evento para que el padre oculte el panel */
+  onClose(): void {
+    this.close.emit();
+  }
+
+  /** Volver a estado inicial del form */
   private resetForm(): void {
     this.isEditing.set(false);
     this.selected.set(null);
