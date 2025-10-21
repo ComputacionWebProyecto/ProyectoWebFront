@@ -12,5 +12,5 @@ import { CommonModule } from '@angular/common';
 export class UserList {
   @Input() users: BackendUserSafeResponse[] = [];
   @Output() onDelete = new EventEmitter<number>();
-
+  @Output() onEdit = new EventEmitter<BackendUserSafeResponse>();
 }

@@ -1,10 +1,11 @@
-import { Component, EventEmitter, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output, SimpleChanges } from '@angular/core';
 import { User } from '../../../models/User';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RoleService } from '../../../services/role.service';
 import { AuthService } from '../../../services/auth.service';
 import { BackendRoleResponse } from '../../../models/BackendRoleResponse';
+import { BackendUserSafeResponse } from '../../../models/BackendUserSafeResponse';
 
 @Component({
   selector: 'app-user-form',
@@ -16,6 +17,8 @@ import { BackendRoleResponse } from '../../../models/BackendRoleResponse';
 export class UserForm implements OnInit {
   @Output() onSave = new EventEmitter<User>();
   @Output() onCancel = new EventEmitter<void>();
+  @Input() userData: BackendUserSafeResponse | null = null;
+
   roles: BackendRoleResponse[] = [];
 
   user: User = new User('', '', '');
@@ -24,6 +27,18 @@ export class UserForm implements OnInit {
 
   ngOnInit(): void {
     this.loadRoles();
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['userData'] && this.userData) {
+      this.user = {
+        id: this.userData.id,
+        nombre: this.userData.nombre,
+        correo: this.userData.correo,
+        contrasena: '', 
+        roleId: this.userData.role.id ?? undefined
+      };
+    }
   }
 
   loadRoles(): void {

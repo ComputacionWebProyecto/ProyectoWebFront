@@ -1,7 +1,6 @@
 <form class="space-y-6 pt-6" (ngSubmit)="save()">
-  <h2 class="text-center text-2xl font-semibold text-gray-800 mb-6">Nuevo Usuario</h2>
+  <h2 class="text-center text-2xl font-semibold text-gray-800 mb-6">Formulario Usuario</h2>
 
-  <!-- Nombre -->
   <div>
     <label class="block text-gray-700 font-medium">Nombre</label>
     <input
@@ -14,7 +13,6 @@
     />
   </div>
 
-  <!-- Correo -->
   <div>
     <label class="block text-gray-700 font-medium">Correo</label>
     <input
@@ -27,7 +25,6 @@
     />
   </div>
 
-  <!-- Contraseña -->
   <div>
     <label class="block text-gray-700 font-medium">Contraseña</label>
     <input
@@ -41,7 +38,6 @@
     />
   </div>
 
-  <!-- Rol -->
   <div>
     <label class="block text-gray-700 font-medium">Rol</label>
     <select
@@ -57,7 +53,6 @@
     </select>
   </div>
 
-  <!-- Botones -->
   <div class="flex justify-end space-x-2">
     <button
       type="button"
@@ -67,7 +62,7 @@
       Cancelar
     </button>
     <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
-      Guardar
+      {{ userData ? 'Actualizar' : 'Guardar' }}
     </button>
   </div>
 </form>
