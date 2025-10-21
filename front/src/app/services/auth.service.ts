@@ -6,6 +6,7 @@ import { Role } from '../models/Role';
 import { Process } from '../models/Process';
 import { Registration } from '../models/Registration';
 import { HttpClient } from '@angular/common/http';
+import { BackendUserResponse } from '../models/BackendUserResponse';
 
 
 @Injectable({
@@ -22,25 +23,44 @@ export class AuthService {
   ) {
 
   }
-  registrar(registrationData: Registration): Observable<User> {
-    return this.http.post<User>('http://localhost:8080/api/register', registrationData).pipe(
-      tap((user: User) => {
-      // Guardar usuario en localStorage
-      if (isPlatformBrowser(this.platformId)) {
-        localStorage.setItem('user', JSON.stringify(user));
-      }
+  registrar(registrationData: Registration): Observable<BackendUserResponse> {
+    return this.http.post<BackendUserResponse>('http://localhost:8080/api/register', registrationData).pipe(
+      tap((backendUser: BackendUserResponse) => {
+        const user = new User(
+          backendUser.nombre,
+          backendUser.correo,
+          backendUser.contrasena,
+          backendUser.company.id,
+          backendUser.role?.id,
+          backendUser.id
+        );
+
+        // Guardar usuario en localStorage
+        if (isPlatformBrowser(this.platformId)) {
+          localStorage.setItem('user', JSON.stringify(user));
+        }
       })
     );
   }
 
 
-  setUser(user: User) {
+
+  setUser(user: BackendUserResponse) {
+    // Normalizamos el formato para que siempre tenga companyId y roleId
+    const normalizedUser = new User(
+      user.nombre,
+      user.correo,
+      user.contrasena,
+      user.company.id,
+      user.role?.id,
+      user.id
+    );
     if (isPlatformBrowser(this.platformId)) {
       localStorage.setItem('user', JSON.stringify(user));
     }
   }
 
-  getUser(): User | null {
+  getUser(): BackendUserResponse | null {
     if (isPlatformBrowser(this.platformId)) {
       const data = localStorage.getItem('user');
       return data ? JSON.parse(data) : null;

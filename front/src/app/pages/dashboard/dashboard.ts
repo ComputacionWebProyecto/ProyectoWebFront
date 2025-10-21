@@ -4,6 +4,8 @@ import { DropdownMenuComponent } from "./drop-menu/drop-menu";
 import { HeaderDashboard } from './header-dashboard/header-dashboard';
 import { GatewayService } from '../../services/gateway.service';
 import { Gateway } from '../../models/Gateway';
+import { ProcessPanel } from './process-panel/process-panel';
+
 
 interface BoardComponent {
   id: string;
@@ -15,24 +17,16 @@ interface BoardComponent {
   gatewayId?: number;
 }
 
-interface BoardComponent {
-  id: string;
-  type: string;
-  category: string;
-  x: number;
-  y: number;
-  label?: string;
-}
-
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, DropdownMenuComponent, HeaderDashboard],
+  imports: [CommonModule, DropdownMenuComponent, HeaderDashboard, ProcessPanel],
   templateUrl: './dashboard.html',
   styleUrls: ['./dashboard.css']
 })
 export class Dashboard implements OnInit {
   isSidebarOpen = true;
+  isProcessPanelOpen = false;
   boardComponents: BoardComponent[] = [];
   private componentCounter = 0;
   private isDraggingExisting = false;
@@ -69,6 +63,10 @@ export class Dashboard implements OnInit {
         console.error('Error al cargar gateways:', error);
       }
     });
+  }
+
+  toggleProcessPanel() { 
+    this.isProcessPanelOpen = !this.isProcessPanelOpen;
   }
 
   toggleSidebar(): void {

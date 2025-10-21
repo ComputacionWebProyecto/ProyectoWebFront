@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, EventEmitter, OnInit, Output } from '@angular/core';
 import { Company } from '../../../../../models/Company';
 import { FormsModule } from '@angular/forms';
 import { User } from '../../../../../models/User';
@@ -19,21 +19,13 @@ export class Register {
   company: Company = new Company(0, '', '');
   user: User = new User('', '', '');
 
+  @Output() registerData = new EventEmitter<Registration>();
+
   constructor(private authService: AuthService, private router: Router) { }
 
   submit() {
-    const registrationData = new Registration(this.company, this.user);
-
-    this.authService.registrar(registrationData).subscribe({
-      next: (createdUser) => {
-        console.log('Datos de registro', createdUser);
-        this.authService.setUser(createdUser);
-        this.router.navigate(['dashboard']);
-      },
-      error: (err) => {
-        alert(err.error?.message || 'Error desconocido');
-      }
-    });
+    const data = new Registration(this.company, this.user);
+    this.registerData.emit(data); 
   }
 
 
