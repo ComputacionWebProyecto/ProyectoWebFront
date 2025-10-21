@@ -12,10 +12,12 @@
     <app-header-dashboard 
       [isSidebarOpen]="isSidebarOpen"
       (toggleSidebar)="toggleSidebar()"
-      (toggleProcesses)="isProcessPanelOpen = !isProcessPanelOpen">
+      (toggleProcesses)="toggleProcessPanel()"
+      (toggleUsers)="toggleUserPanel()">
     </app-header-dashboard>
 
     <!-- Panel lateral derecho -->
+    <app-user-panel [isOpen]="isUserPanelOpen"></app-user-panel>
     <app-process-panel [isOpen]="isProcessPanelOpen"></app-process-panel>
 
     <!-- Contenido del dashboard con padding-top para compensar el header fijo -->

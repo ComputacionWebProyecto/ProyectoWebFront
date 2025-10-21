@@ -5,6 +5,7 @@ import { HeaderDashboard } from './header-dashboard/header-dashboard';
 import { GatewayService } from '../../services/gateway.service';
 import { Gateway } from '../../models/Gateway';
 import { ProcessPanel } from './process-panel/process-panel';
+import { UserPanel } from './user-panel/user-panel';
 
 interface BoardComponent {
   id: string;
@@ -20,13 +21,14 @@ interface BoardComponent {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, DropdownMenuComponent, HeaderDashboard, ProcessPanel],
+  imports: [CommonModule, DropdownMenuComponent, HeaderDashboard, ProcessPanel, UserPanel],
   templateUrl: './dashboard.html',
   styleUrls: ['./dashboard.css']
 })
 export class Dashboard implements OnInit {
   isSidebarOpen = true;
   isProcessPanelOpen = false;
+  isUserPanelOpen = false;
   boardComponents: BoardComponent[] = [];
   private componentCounter = 0;
   private isDraggingExisting = false;
@@ -62,6 +64,15 @@ export class Dashboard implements OnInit {
 
   toggleProcessPanel() { 
     this.isProcessPanelOpen = !this.isProcessPanelOpen;
+    if(this.isUserPanelOpen){
+      this.isUserPanelOpen = false;
+    }
+  }
+  toggleUserPanel(){
+    this.isUserPanelOpen = !this.isUserPanelOpen;
+    if(this.isProcessPanelOpen){
+      this.isProcessPanelOpen = false;
+    }
   }
 
   toggleSidebar(): void {
