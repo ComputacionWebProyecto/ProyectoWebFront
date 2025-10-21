@@ -210,17 +210,15 @@ export class Dashboard implements OnInit {
         }
       });
     }
-  }
+}
 
   getComponentLabel(type: string): string {
     const labels: { [key: string]: string } = {
       'decision-gateway': 'Decisión',
-      'parallel-gateway': 'Paralelo',
-      'exclusive-gateway': 'Exclusivo',
       'task-user': 'Tarea de Usuario',
       'event-start': 'Evento Inicio'
     };
-    return labels[type] || type;
+    return labels[type] || 'Decisión';
   }
 
   onComponentSelected(data: {type: string, category: string}): void {
