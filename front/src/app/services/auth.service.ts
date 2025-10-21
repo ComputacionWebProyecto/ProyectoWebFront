@@ -5,7 +5,6 @@ import { Observable, pipe, tap } from 'rxjs';
 import { Role } from '../models/Role';
 import { Process } from '../models/Process';
 import { Registration } from '../models/Registration';
-import { LoginResponse } from '../models/Login';
 import { LoginRequest } from '../models/Login';
 import { HttpClient } from '@angular/common/http';
 import { BackendUserResponse } from '../models/BackendUserResponse';

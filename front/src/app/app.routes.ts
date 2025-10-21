@@ -1,10 +1,11 @@
 import { Routes } from '@angular/router';
 import { Dashboard } from './pages/dashboard/dashboard';
-import { Auth } from './pages/auth/auth'
+import { Auth } from './pages/auth/auth';
 import { AuthGuard } from './services/auth.guard';
 
 export const routes: Routes = [
-  { path: '', redirectTo: 'auth/login', pathMatch: 'full' },
-  { path: 'auth/:mode', component: Auth }, 
+  { path: '', redirectTo: 'auth/login', pathMatch: 'full' },        
+  { path: 'auth', redirectTo: 'auth/login', pathMatch: 'full' },    
+  { path: 'auth/:mode', component: Auth },                          
   { path: 'dashboard', component: Dashboard, canActivate: [AuthGuard] },
 ];

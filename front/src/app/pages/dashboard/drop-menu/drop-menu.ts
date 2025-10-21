@@ -20,7 +20,7 @@ export class DropdownMenuComponent {
 
   logout(){
     this.authService.logout();
-    this.router.navigate(['auth']);
+    this.router.navigate(['auth/login']);
   }
 
   // Estado de los submenús

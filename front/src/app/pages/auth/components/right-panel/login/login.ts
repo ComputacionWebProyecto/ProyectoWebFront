@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../../../services/auth.service';
-import { LoginRequest, LoginResponse } from '../../../../../models/Login';
+import { LoginRequest } from '../../../../../models/Login';
 import { BackendUserResponse } from '../../../../../models/BackendUserResponse';
 
 @Component({

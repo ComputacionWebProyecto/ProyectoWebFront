@@ -14,20 +14,3 @@ export class LoginRequest {
     this.contrasena = contrasena;
   }
 }
-
-/**
- * Representa la respuesta del backend después del login
- */
-export class LoginResponse {
-  message: string;
-  user: User;
-  company?: Company;
-  role?: Role;
-
-  constructor(message: string, user: User, company?: Company, role?: Role) {
-    this.message = message;
-    this.user = user;
-    this.company = company;
-    this.role = role;
-  }
-}
