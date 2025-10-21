@@ -1,5 +1,6 @@
 import { User } from "./User";
 import { Company } from "./Company";
+import { Role } from "./Role";
 
 /**
  * Representa las credenciales enviadas para el login
@@ -19,12 +20,14 @@ export class LoginRequest {
  */
 export class LoginResponse {
   message: string;
-  company?: Company;
   user: User;
+  company?: Company;
+  role?: Role;
 
-  constructor(message: string, user: User, company?: Company) {
+  constructor(message: string, user: User, company?: Company, role?: Role) {
     this.message = message;
     this.user = user;
     this.company = company;
+    this.role = role;
   }
 }
