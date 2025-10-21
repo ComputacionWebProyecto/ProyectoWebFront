@@ -12,11 +12,15 @@
     <app-header-dashboard 
       [isSidebarOpen]="isSidebarOpen"
       (toggleSidebar)="toggleSidebar()"
-      (toggleProcesses)="isProcessPanelOpen = !isProcessPanelOpen">
+      (toggleProcesses)="isProcessPanelOpen = !isProcessPanelOpen"
+      (toggleRoles)="onToggleRoles()"> <!-- NUEVO -->
     </app-header-dashboard>
 
-    <!-- Panel lateral derecho -->
+    <!-- Panel lateral derecho: PROCESOS -->
     <app-process-panel [isOpen]="isProcessPanelOpen"></app-process-panel>
+
+    <!-- Panel lateral derecho: ROLES (NUEVO) -->
+    <app-role-panel [isOpen]="isRolePanelOpen"></app-role-panel>
 
     <!-- Contenido del dashboard con padding-top para compensar el header fijo -->
     <main class="flex-1 overflow-hidden pt-16">

@@ -1,0 +1,40 @@
+
+<form class="space-y-6 pt-6" (ngSubmit)="save()">
+  <h2 class="text-center text-2xl font-semibold text-gray-800 mb-6">
+    {{ role?.id ? 'Editar Rol' : 'Nuevo Rol' }}
+  </h2>
+
+  <div>
+    <label class="block text-gray-700 font-medium">Nombre</label>
+    <input
+      [(ngModel)]="role.nombre"
+      name="nombre"
+      class="w-full border rounded-lg p-2 mt-1"
+      placeholder="Nombre del rol"
+    />
+  </div>
+
+  <div>
+    <label class="block text-gray-700 font-medium">Descripción</label>
+    <textarea
+      [(ngModel)]="role.descripcion"
+      name="descripcion"
+      class="w-full border rounded-lg p-2 mt-1"
+      rows="3"
+      placeholder="Descripción del rol"
+    ></textarea>
+  </div>
+
+  <div class="flex justify-end space-x-2">
+    <button
+      type="button"
+      (click)="cancel()"
+      class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg"
+    >
+      Cancelar
+    </button>
+    <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
+      Guardar
+    </button>
+  </div>
+</form>

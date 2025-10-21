@@ -16,40 +16,36 @@
     <h1 class="text-xl font-semibold tracking-wide">404 NOT FOUND</h1>
   </div>
 
-  
-  <!-- lado Derecho: Botones -->
-   <!-- Botón: Users -->
+  <!-- Lado Derecho: Botones -->
   <div class="flex items-center space-x-4">
+    <!-- Botón: Users (sin cambios) -->
     <button
-      class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-sm font-medium transition"
-    >
+      class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-sm font-medium transition">
       Users
     </button>
 
-    <!-- Botón: Roles -->
+    <!-- Botón: Roles (👉 ahora emite el evento para abrir/cerrar el panel) -->
     <button
-      class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-sm font-medium transition"
-    >
+      (click)="$event.stopPropagation(); toggleRolesPanel()"
+      class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-sm font-medium transition">
       Roles
     </button>
 
     <!-- Botón: My Processes -->
     <button
-    (click)="$event.stopPropagation(); toggleProcessPanel()"
-      class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-medium transition"
-    >
+      (click)="$event.stopPropagation(); toggleProcessPanel()"
+      class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-medium transition">
       My Processes
     </button>
 
     <!-- Botón: Perfil -->
     <button
-      class="flex items-center space-x-2 bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded-lg text-sm font-medium transition"
-    >
+      class="flex items-center space-x-2 bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded-lg text-sm font-medium transition">
       <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M5.121 17.804A7.97 7.97 0 0112 15a7.97 7.97 0 016.879 2.804M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
       </svg>
     </button>
-    
   </div>
 </header>
+<!-- header-dashboard.html -->
