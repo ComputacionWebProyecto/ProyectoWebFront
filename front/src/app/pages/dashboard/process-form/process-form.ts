@@ -14,10 +14,7 @@ export class ProcessForm {
   @Output() onSave = new EventEmitter<Process>();
   @Output() onCancel = new EventEmitter<void>();
 
-  process: Process = {
-    name: '',
-    description: ''
-  };
+  process: Process = new Process('', '');
 
   save() {
     this.onSave.emit(this.process);

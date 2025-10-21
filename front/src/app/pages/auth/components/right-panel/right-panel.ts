@@ -1,8 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+
+import { Component, OnInit, EventEmitter, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { Register } from './register/register';
 import { Login } from './login/login';
+import { Registration } from '../../../../models/Registration';
 
 @Component({
   selector: 'app-right-panel',
@@ -14,6 +16,7 @@ import { Login } from './login/login';
 export class RightPanel implements OnInit {
 
   isLoginRoute: boolean = false;
+  @Output() register = new EventEmitter<Registration>();
 
   constructor(private route: ActivatedRoute) { }
 
@@ -27,4 +30,9 @@ export class RightPanel implements OnInit {
     });
   }
 
+  onRegister(data: Registration) {
+    this.register.emit(data);
+  }
+
 }
+

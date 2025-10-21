@@ -4,6 +4,7 @@
   @if (isLoginRoute) {
     <app-login class="w-full"></app-login>
   } @else {
-    <app-register class="w-full"></app-register>
+    <app-register (registerData)="onRegister($event)" class="w-full "></app-register>
   }
+
 </div>

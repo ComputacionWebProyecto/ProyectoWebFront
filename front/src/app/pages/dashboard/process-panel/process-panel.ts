@@ -4,6 +4,7 @@ import { ProcessService } from '../../../services/process.service';
 import { Process } from '../../../models/Process';
 import { ProcessList } from '../process-list/process-list';
 import { ProcessForm } from '../process-form/process-form';
+import { AuthService } from '../../../services/auth.service';
 
 
 @Component({
@@ -14,11 +15,11 @@ import { ProcessForm } from '../process-form/process-form';
   styleUrl: './process-panel.css'
 })
 export class ProcessPanel implements OnInit {
-  @Input() isOpen = true; 
+  @Input() isOpen = false; 
   processes: Process[] = [];
   isCreating = false; // Formulario o lista
 
- constructor(private processService: ProcessService) {}
+ constructor(private processService: ProcessService, private authService: AuthService) {}
 
   ngOnInit(): void {
     this.loadProcesses();
@@ -44,19 +45,23 @@ export class ProcessPanel implements OnInit {
   }
 
   saveProcess(newProcess: Process) {
+    const user = this.authService.getUser();
+    console.log('Datos usuario:', user);
+    newProcess.companyId = user?.company.id;
+    console.log('Proceso a crear:', newProcess);
     this.processService.createProcess(newProcess).subscribe({
       next: () => {
         this.isCreating = false;
         this.loadProcesses(); // recargar la lista
       },
-      error: (err: any) => console.error('Error creating process', err)
+      error: (err) => console.error('Error creating process', err)
     });
   }
 
   deleteProcess(processId: number) {
     this.processService.deleteProcess(processId).subscribe({
       next: () => this.loadProcesses(),
-      error: (err: any) => console.error('Error deleting process', err)
+      error: (err) => console.error('Error deleting process', err)
     });
   }
 }

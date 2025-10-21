@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../../../services/auth.service';
 import { LoginRequest, LoginResponse } from '../../../../../models/Login';
+import { BackendUserResponse } from '../../../../../models/BackendUserResponse';
 
 @Component({
   selector: 'app-login',
@@ -21,13 +22,9 @@ export class Login {
   submit() {
     console.log('Intentando login con credenciales:', this.credentials);
     this.authService.login(this.credentials).subscribe({
-      next: (response: LoginResponse) => {
-        console.log('Respuesta del login:', response);
-        console.log('Usuario autenticado:', response.user);
-        this.authService.setUser(response.user);
-        console.log('Usuario guardado en localStorage');
+      next: (response: BackendUserResponse) => {
+        this.authService.setUser(response);
         this.router.navigate(['/dashboard']);
-        console.log('Navegando a /dashboard');
       },
       error: (err) => {
         console.log('Error en login:', err);
