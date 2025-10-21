@@ -13,7 +13,6 @@ export class HeaderDashboard {
 
   @Output() toggleSidebar = new EventEmitter<void>();
   @Output() toggleProcesses = new EventEmitter<void>();
-  // 👉 NUEVO: evento para abrir/cerrar el panel de Roles
   @Output() toggleRoles = new EventEmitter<void>();
 
   onToggleSidebar() {
