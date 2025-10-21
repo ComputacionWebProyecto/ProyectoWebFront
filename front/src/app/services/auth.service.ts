@@ -56,9 +56,6 @@ export class AuthService {
     );
   }
 
-
-
-
   setUser(user: BackendUserResponse) {
     // Normalizamos el formato para que siempre tenga companyId y roleId
     const normalizedUser = new User(

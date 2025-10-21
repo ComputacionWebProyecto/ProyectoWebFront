@@ -2,9 +2,8 @@
   <img src="images/prueba.png" class="w-24 h-24 mb-8">
   
   @if (isLoginRoute) {
-    <app-login class="w-full"></app-login>
+    <app-login (loginData)="onLogin($event)" class="w-full"></app-login>
   } @else {
-    <app-register (registerData)="onRegister($event)" class="w-full "></app-register>
+    <app-register (registerData)="onRegister($event)" class="w-full"></app-register>
   }
-
 </div>

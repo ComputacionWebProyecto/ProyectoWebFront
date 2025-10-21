@@ -4,7 +4,8 @@ import { RightPanel } from './components/right-panel/right-panel';
 import { AuthService } from '../../services/auth.service';
 import { Router, RouterModule } from '@angular/router';
 import { Registration } from '../../models/Registration';
-
+import { LoginRequest } from '../../models/Login';
+import { BackendUserResponse } from '../../models/BackendUserResponse';
 
 @Component({
   selector: 'app-auth',
@@ -22,6 +23,7 @@ export class Auth implements OnInit {
       this.router.navigate(['/dashboard']);
     }
   }
+
   onRegisterSubmit(data: Registration) {
     this.authService.registrar(data).subscribe({
       next: (createdUser) => {
@@ -35,5 +37,18 @@ export class Auth implements OnInit {
     });
   }
 
-
+  onLoginSubmit(credentials: LoginRequest) {
+    console.log('Intentando login con credenciales:', credentials);
+    this.authService.login(credentials).subscribe({
+      next: (response: BackendUserResponse) => {
+        console.log('Login exitoso:', response);
+        this.authService.setUser(response);
+        this.router.navigate(['/dashboard']);
+      },
+      error: (err) => {
+        console.log('Error en login:', err);
+        alert(err.error?.message || 'Error al iniciar sesión');
+      }
+    });
+  }
 }

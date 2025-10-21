@@ -29,7 +29,4 @@ export class Register {
     const data = new Registration(this.company, this.user);
     this.registerData.emit(data); 
   }
-
-
-
 }
