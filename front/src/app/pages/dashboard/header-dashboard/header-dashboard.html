@@ -26,6 +26,7 @@
   <!-- lado Derecho: Botones -->
   <!-- Botón: Users -->
   <div class="flex items-center space-x-4">
+    <!-- Botón: Users (sin cambios) -->
     <button
       (click)="$event.stopPropagation(); toggleUserPanel()"
       class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-sm font-medium transition"
@@ -33,10 +34,10 @@
       Users
     </button>
 
-    <!-- Botón: Roles -->
+    
     <button
-      class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-sm font-medium transition"
-    >
+      (click)="$event.stopPropagation(); toggleRolesPanel()"
+      class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-sm font-medium transition">
       Roles
     </button>
 
@@ -69,3 +70,4 @@
     </button>
   </div>
 </header>
+<!-- header-dashboard.html -->

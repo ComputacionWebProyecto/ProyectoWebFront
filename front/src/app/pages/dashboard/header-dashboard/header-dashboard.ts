@@ -1,4 +1,3 @@
-// header-dashboard.ts
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
@@ -11,9 +10,11 @@ import { CommonModule } from '@angular/common';
 })
 export class HeaderDashboard {
   @Input() isSidebarOpen = true;
+
   @Output() toggleSidebar = new EventEmitter<void>();
   @Output() toggleProcesses = new EventEmitter<void>();
   @Output() toggleUsers = new EventEmitter<void>();
+  @Output() toggleRoles = new EventEmitter<void>();
 
   onToggleSidebar() {
     this.toggleSidebar.emit();
@@ -26,4 +27,8 @@ export class HeaderDashboard {
   toggleUserPanel(){
     this.toggleUsers.emit();
   }
+  toggleRolesPanel() {
+    this.toggleRoles.emit();
+  }
 }
+ 

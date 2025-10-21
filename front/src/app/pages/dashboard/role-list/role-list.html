@@ -1,0 +1,26 @@
+<ul class="space-y-3">
+  <li *ngFor="let role of roles"
+      class="flex flex-col p-4 bg-gray-50 rounded-lg shadow-sm hover:bg-gray-100 transition">
+    <div class="flex justify-between items-center">
+      <span class="text-gray-800 font-semibold">{{ role.nombre }}</span>
+      <div class="flex space-x-2">
+        <!-- Editar -->
+        <button class="p-1 rounded-full hover:bg-blue-100" (click)="onEdit.emit(role)">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M15.232 5.232a3 3 0 114.243 4.243L7.5 21H3v-4.5L15.232 5.232z"/>
+          </svg>
+        </button>
+        <!-- Eliminar (inactivar) -->
+        <button class="p-1 rounded-full hover:bg-red-100" (click)="onDelete.emit(role.id!)">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+    <p class="text-sm text-gray-600 mt-1">{{ role.descripcion }}</p>
+  </li>
+</ul>
+<!-- Lista de roles -->

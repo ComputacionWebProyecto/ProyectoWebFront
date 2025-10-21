@@ -7,6 +7,7 @@ import { Gateway } from '../../models/Gateway';
 import { ProcessPanel } from './process-panel/process-panel';
 import { UserPanel } from './user-panel/user-panel';
 
+import { RolePanel } from './role-panel/role-panel'; // NUEVO
 
 interface BoardComponent {
   id: string;
@@ -21,7 +22,7 @@ interface BoardComponent {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, DropdownMenuComponent, HeaderDashboard, ProcessPanel, UserPanel],
+  imports: [CommonModule, DropdownMenuComponent, HeaderDashboard, ProcessPanel, UserPanel,RolePanel],
   templateUrl: './dashboard.html',
   styleUrls: ['./dashboard.css']
 })
@@ -29,6 +30,8 @@ export class Dashboard implements OnInit {
   isSidebarOpen = true;
   isProcessPanelOpen = false;
   isUserPanelOpen = false;
+  isRolePanelOpen = false; // NUEVO
+
   boardComponents: BoardComponent[] = [];
   private componentCounter = 0;
   private isDraggingExisting = false;
@@ -65,6 +68,13 @@ export class Dashboard implements OnInit {
         console.error('Error al cargar gateways:', error);
       }
     });
+  }
+
+  // NUEVO: se llama desde (toggleRoles) del header
+  onToggleRoles(): void {
+    // si no quieres dos paneles abiertos a la vez, cierra el de procesos:
+    // this.isProcessPanelOpen = false;
+    this.isRolePanelOpen = !this.isRolePanelOpen;
   }
 
   toggleProcessPanel() { 
