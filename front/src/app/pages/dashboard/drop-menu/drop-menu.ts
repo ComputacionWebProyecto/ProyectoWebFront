@@ -64,8 +64,4 @@ export class DropdownMenuComponent {
     this.componentSelected.emit({ type: componentType, category: category });
   }
 
-  logout() {
-    this.authService.logout();
-    this.router.navigate(['auth']);
-  }
 }
