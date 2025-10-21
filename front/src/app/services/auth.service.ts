@@ -5,6 +5,7 @@ import { Observable, pipe, tap } from 'rxjs';
 import { Role } from '../models/Role';
 import { Process } from '../models/Process';
 import { Registration } from '../models/Registration';
+import { LoginRequest } from '../models/Login';
 import { HttpClient } from '@angular/common/http';
 import { BackendUserResponse } from '../models/BackendUserResponse';
 
@@ -42,6 +43,19 @@ export class AuthService {
       })
     );
   }
+
+  login(credentials: LoginRequest): Observable<BackendUserResponse> {
+    console.log('Enviando petición de login a backend:', credentials);
+    return this.http.post<BackendUserResponse>('http://localhost:8080/api/login', credentials).pipe(
+      tap((response: BackendUserResponse) => {
+        console.log('Respuesta del backend:', response);
+        if (isPlatformBrowser(this.platformId)) {
+          localStorage.setItem('user', JSON.stringify(response));
+        }
+      })
+    );
+  }
+
 
 
 

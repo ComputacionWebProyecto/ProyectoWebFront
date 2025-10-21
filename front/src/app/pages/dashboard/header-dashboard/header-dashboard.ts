@@ -13,6 +13,7 @@ export class HeaderDashboard {
   @Input() isSidebarOpen = true;
   @Output() toggleSidebar = new EventEmitter<void>();
   @Output() toggleProcesses = new EventEmitter<void>();
+  @Output() toggleUsers = new EventEmitter<void>();
 
   onToggleSidebar() {
     this.toggleSidebar.emit();
@@ -20,5 +21,9 @@ export class HeaderDashboard {
 
   toggleProcessPanel() { 
     this.toggleProcesses.emit();
+  }
+
+  toggleUserPanel(){
+    this.toggleUsers.emit();
   }
 }

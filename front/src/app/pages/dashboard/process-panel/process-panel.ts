@@ -15,7 +15,7 @@ import { AuthService } from '../../../services/auth.service';
   styleUrl: './process-panel.css'
 })
 export class ProcessPanel implements OnInit {
-  @Input() isOpen = true; 
+  @Input() isOpen = false; 
   processes: Process[] = [];
   isCreating = false; // Formulario o lista
 

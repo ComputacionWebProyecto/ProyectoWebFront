@@ -1,26 +1,33 @@
 <!-- header-dashboard.html -->
-<header class="fixed top-0 left-0 w-full z-50 bg-gray-900 text-white flex items-center justify-between px-6 py-3 shadow-md">
-  
+<header
+  class="fixed top-0 left-0 w-full z-50 bg-gray-900 text-white flex items-center justify-between px-6 py-3 shadow-md"
+>
   <!-- Lado Izquierdo: Botón Hamburguesa + Logo + Nombre -->
   <div class="flex items-center space-x-3">
     <!-- Botón con ícono de lápiz -->
     <button
       (click)="onToggleSidebar()"
-      class="p-2 rounded-lg hover:bg-gray-800 transition-colors mr-2">
+      class="p-2 rounded-lg hover:bg-gray-800 transition-colors mr-2"
+    >
       <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+        />
       </svg>
     </button>
 
-    <img src="images/prueba.png" alt="Logo" class="w-10 h-10 rounded-full">
+    <img src="images/prueba.png" alt="Logo" class="w-10 h-10 rounded-full" />
     <h1 class="text-xl font-semibold tracking-wide">404 NOT FOUND</h1>
   </div>
 
-  
   <!-- lado Derecho: Botones -->
-   <!-- Botón: Users -->
+  <!-- Botón: Users -->
   <div class="flex items-center space-x-4">
     <button
+      (click)="$event.stopPropagation(); toggleUserPanel()"
       class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-sm font-medium transition"
     >
       Users
@@ -35,7 +42,7 @@
 
     <!-- Botón: My Processes -->
     <button
-    (click)="$event.stopPropagation(); toggleProcessPanel()"
+      (click)="$event.stopPropagation(); toggleProcessPanel()"
       class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-medium transition"
     >
       My Processes
@@ -45,11 +52,20 @@
     <button
       class="flex items-center space-x-2 bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded-lg text-sm font-medium transition"
     >
-      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M5.121 17.804A7.97 7.97 0 0112 15a7.97 7.97 0 016.879 2.804M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        class="w-5 h-5"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M5.121 17.804A7.97 7.97 0 0112 15a7.97 7.97 0 016.879 2.804M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+        />
       </svg>
     </button>
-    
   </div>
 </header>

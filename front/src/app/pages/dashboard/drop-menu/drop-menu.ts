@@ -15,7 +15,12 @@ export class DropdownMenuComponent {
   @Input() isOpen = true;
   @Output() componentSelected = new EventEmitter<{ type: string; category: string }>();
 
-  constructor(private authService: AuthService, private router: Router) {}
+  constructor(private authService: AuthService, private router: Router){}
+
+  logout(){
+    this.authService.logout();
+    this.router.navigate(['auth/login']);
+  }
 
   // Estado de los submenús
   isGatewayOpen = false;
