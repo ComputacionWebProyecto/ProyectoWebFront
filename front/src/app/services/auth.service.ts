@@ -5,6 +5,8 @@ import { Observable, pipe, tap } from 'rxjs';
 import { Role } from '../models/Role';
 import { Process } from '../models/Process';
 import { Registration } from '../models/Registration';
+import { LoginResponse } from '../models/Login';
+import { LoginRequest } from '../models/Login';
 import { HttpClient } from '@angular/common/http';
 
 
@@ -33,16 +35,20 @@ export class AuthService {
     );
   }
 
-  login(credentials: { correo: string, contrasena: string }): Observable<User> {
-  return this.http.post<User>('http://localhost:8080/api/login', credentials).pipe(
-    tap((user: User) => {
-      // Guardar usuario en localStorage
+login(credentials: LoginRequest): Observable<LoginResponse> {
+  console.log('Enviando petición de login a backend:', credentials);
+  return this.http.post<LoginResponse>('http://localhost:8080/api/login', credentials).pipe(
+    tap((response: LoginResponse) => {
+      console.log('Respuesta del backend:', response);
       if (isPlatformBrowser(this.platformId)) {
-        localStorage.setItem('user', JSON.stringify(user));
+        localStorage.setItem('user', JSON.stringify(response.user));
+        console.log('Usuario guardado en localStorage:', response.user);
       }
     })
   );
 }
+
+
 
   setUser(user: User) {
     if (isPlatformBrowser(this.platformId)) {
