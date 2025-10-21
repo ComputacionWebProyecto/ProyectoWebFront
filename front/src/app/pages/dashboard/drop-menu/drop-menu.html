@@ -104,52 +104,62 @@
         </ul>
       </li>
 
-      <!-- Gateway (con submenú desplegable) -->
-      <li>
-        <button
-          (click)="toggleGateway()"
-          class="w-full flex items-center justify-between p-3 rounded-lg hover:bg-gray-100 transition-colors group">
-          <div class="flex items-center">
-            <!-- Ícono de Gateway (rombo) -->
-            <svg class="w-5 h-5 text-gray-500 group-hover:text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2l10 10-10 10L2 12 12 2z" />
-            </svg>
-            <span class="ml-3 text-gray-700 group-hover:text-blue-600 font-medium">Gateway</span>
-          </div>
-          <!-- Flecha que rota -->
-          <svg 
-            class="w-4 h-4 text-gray-500 transition-transform duration-200"
-            [class.rotate-90]="isGatewayOpen"
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
-
-        <!-- Submenú de Gateway -->
-        <ul 
-          *ngIf="isGatewayOpen" 
-          class="ml-8 mt-2 space-y-1 border-l-2 border-gray-200 pl-3">
-          
-          <!-- Gateway de Decisión -->
-          <li>
-            <div 
-              draggable="true"
-              (dragstart)="onDragStart($event, 'decision-gateway', 'gateway')"
-              (dragend)="onDragEnd($event)"
-              (click)="onSelectComponent('decision-gateway', 'gateway')"
-              class="flex items-center p-2 rounded-lg hover:bg-blue-50 transition-colors cursor-move group border-2 border-transparent hover:border-blue-300">
-              <svg class="w-5 h-5 text-blue-500 group-hover:text-blue-600" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2L2 12L12 22L22 12L12 2Z" stroke="currentColor" stroke-width="1.5" fill="none"/>
-                <text x="12" y="15" text-anchor="middle" font-size="12" fill="currentColor">?</text>
+        <!-- Gateway (con submenú desplegable) -->
+        <li>
+          <button
+            (click)="toggleGateway()"
+            class="w-full flex items-center justify-between p-3 rounded-lg hover:bg-gray-100 transition-colors group">
+            <div class="flex items-center">
+              <!-- Ícono de Gateway (rombo) -->
+              <svg class="w-5 h-5 text-gray-500 group-hover:text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2l10 10-10 10L2 12 12 2z" />
               </svg>
-              <span class="ml-3 text-gray-700 group-hover:text-blue-600 font-medium text-sm">Decisión</span>
+              <span class="ml-3 text-gray-700 group-hover:text-blue-600 font-medium">Gateway</span>
             </div>
-          </li>
-        </ul>
-      </li>
+            <!-- Flecha que rota -->
+            <svg 
+              class="w-4 h-4 text-gray-500 transition-transform duration-200"
+              [class.rotate-90]="isGatewayOpen"
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
 
+          <!-- Submenú de Gateway -->
+          <ul 
+            *ngIf="isGatewayOpen" 
+            class="ml-8 mt-2 space-y-1 border-l-2 border-gray-200 pl-3">
+            
+            <!-- Gateway de Decisión -->
+            <li>
+              <div 
+                draggable="true"
+                (dragstart)="onDragStart($event, 'decision-gateway', 'gateway')"
+                (dragend)="onDragEnd($event)"
+                (click)="onSelectComponent('decision-gateway', 'gateway')"
+                class="flex items-center p-2 rounded-lg hover:bg-blue-50 transition-colors cursor-move group border-2 border-transparent hover:border-blue-300">
+                <svg class="w-5 h-5 text-blue-500 group-hover:text-blue-600" fill="none" viewBox="0 0 24 24">
+                  <path 
+                    d="M12 2L22 12L12 22L2 12L12 2Z" 
+                    stroke="currentColor" 
+                    stroke-width="1.5" 
+                    fill="#DBEAFE" 
+                  />
+                  <text 
+                    x="12" 
+                    y="15" 
+                    text-anchor="middle" 
+                    font-size="12" 
+                    fill="#2563EB"
+                    font-weight="bold">?</text>
+                </svg>
+                <span class="ml-3 text-gray-700 group-hover:text-blue-600 font-medium text-sm">Decisión</span>
+              </div>
+            </li>
+          </ul>
+        </li>
       <!-- Perfil -->
       <li>
         <a 

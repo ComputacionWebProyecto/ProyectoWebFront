@@ -31,25 +31,30 @@ export class Dashboard implements OnInit {
   constructor(private gatewayService: GatewayService) {}
 
   ngOnInit(): void {
+    // Cargar gateways existentes solo al iniciar
     this.loadGateways();
   }
 
   loadGateways(): void {
     this.gatewayService.getGateways().subscribe({
       next: (gateways: Gateway[]) => {
-        this.boardComponents = gateways
-          .filter((gateway: Gateway) => gateway.status === 'active' && gateway.id)
-          .map((gateway: Gateway) => ({
-            id: `gateway-${gateway.id}`,
-            type: gateway.type || 'unknown',
-            category: 'gateway',
-            x: gateway.x ?? 100,
-            y: gateway.y ?? 100,
-            label: this.getComponentLabel(gateway.type || 'unknown'),
-            gatewayId: gateway.id
-          }));
-
-        console.log('Gateways cargados:', this.boardComponents);
+        // Limpiar solo los gateways que vienen del backend para evitar duplicados
+        this.boardComponents = [];
+        
+        gateways.forEach((gateway: Gateway) => {
+          if (gateway.status === 'active' && gateway.id) {
+            this.boardComponents.push({
+              id: `gateway-${gateway.id}`,
+              type: gateway.type,
+              category: 'gateway',
+              x: gateway.x || 100,
+              y: gateway.y || 100,
+              label: this.getComponentLabel(gateway.type),
+              gatewayId: gateway.id
+            });
+          }
+        });
+        console.log('Gateways cargados desde backend:', this.boardComponents);
       },
       error: (error: any) => {
         console.error('Error al cargar gateways:', error);
@@ -63,37 +68,43 @@ export class Dashboard implements OnInit {
 
   onBoardDrop(event: DragEvent): void {
     event.preventDefault();
-
+    
+    // Verificar si es un componente existente que se está moviendo
     const componentId = event.dataTransfer?.getData('component-id');
-    const boardElement = event.currentTarget as HTMLElement;
-
-    if (!boardElement || !event.clientX || !event.clientY) return;
-
-    const rect = boardElement.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-
+    
     if (componentId) {
-      // Mover componente existente
+      // MOVER componente existente
+      const boardElement = event.currentTarget as HTMLElement;
+      const rect = boardElement.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      
       const component = this.boardComponents.find(c => c.id === componentId);
       if (component) {
         component.x = x - 30;
         component.y = y - 30;
-
+        console.log('Componente reposicionado:', component);
+        
+        // Si es un gateway, actualizar posición en el backend
         if (component.gatewayId && component.category === 'gateway') {
           this.updateGatewayPosition(component);
         }
       }
     } else {
-      // Agregar nuevo componente
+      // AGREGAR nuevo componente desde el menú
       const componentType = event.dataTransfer?.getData('component-type');
       const componentCategory = event.dataTransfer?.getData('component-category');
-
+      
       if (componentType && componentCategory) {
+        const boardElement = event.currentTarget as HTMLElement;
+        const rect = boardElement.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        
         this.addComponentToBoard(componentType, componentCategory, x, y);
       }
     }
-
+    
     this.isDraggingExisting = false;
   }
 
@@ -105,32 +116,80 @@ export class Dashboard implements OnInit {
   }
 
   addComponentToBoard(type: string, category: string, x: number, y: number): void {
-  const newGateway: Gateway = {
-    type: 'exclusive-gateway', // por ahora solo uno
-    status: 'active',
+  console.log(' Agregando componente:', type, category, 'en posición:', x, y);
+  
+  // Crear ID temporal único
+  const tempId = `temp-${Date.now()}-${Math.random()}`;
+  
+  const newComponent: BoardComponent = {
+    id: tempId,
+    type: type,
+    category: category,
     x: x - 30,
-    y: y - 30
+    y: y - 30,
+    label: this.getComponentLabel(type)
   };
+  
 
-    this.gatewayService.createGateway(newGateway).subscribe({
+  this.boardComponents.push(newComponent);
+  console.log('Componente agregado visualmente:', newComponent);
+  console.log('Total componentes en tablero:', this.boardComponents.length);
+  
+  // Si es un gateway, guardarlo en el backend
+  if (category === 'gateway') {
+    const gateway: Gateway = {
+      type: type,
+      status: 'active',
+      x: newComponent.x,
+      y: newComponent.y
+    };
+    
+    console.log('Enviando gateway al backend:', gateway);
+    console.log('URL del backend:', 'http://localhost:8080/api/gateways');
+    
+    this.gatewayService.createGateway(gateway).subscribe({
       next: (savedGateway: Gateway) => {
+        console.log('========================================');
+        console.log('RESPUESTA DEL BACKEND RECIBIDA');
+        console.log('========================================');
         console.log('Gateway guardado:', savedGateway);
-
-        this.boardComponents.push({
-          id: `gateway-${savedGateway.id}`,
-          type: savedGateway.type,
-          category: 'gateway',
-          x: savedGateway.x!,
-          y: savedGateway.y!,
-          label: 'Gateway',
-          gatewayId: savedGateway.id
-        });
+        console.log('ID:', savedGateway.id);
+        console.log('Tipo:', savedGateway.type);
+        console.log('Status:', savedGateway.status);
+        console.log('Posición X:', savedGateway.x);
+        console.log('Posición Y:', savedGateway.y);
+        console.log('========================================');
+        
+        // Actualizar el componente con el ID real del backend
+        const component = this.boardComponents.find(c => c.id === tempId);
+        if (component && savedGateway.id) {
+          component.gatewayId = savedGateway.id;
+          component.id = `gateway-${savedGateway.id}`;
+          console.log('🔄 Componente actualizado con ID del backend:', component);
+        } else {
+          console.warn('No se pudo encontrar el componente temporal para actualizar');
+        }
       },
       error: (error: any) => {
-        console.error('Error al guardar gateway:', error);
+        console.log('========================================');
+        console.error('ERROR AL GUARDAR EN BACKEND');
+        console.log('========================================');
+        console.error('Error completo:', error);
+        console.error('Status:', error.status);
+        console.error('Mensaje:', error.message);
+        console.error('URL:', error.url);
+        
+        if (error.error) {
+          console.error('Detalles del error:', error.error);
+        }
+        console.log('========================================');
+        
+        // El componente ya está visible, solo logueamos el error
+        console.log('El componente permanece visible localmente');
       }
     });
   }
+}
 
   updateGatewayPosition(component: BoardComponent): void {
     if (component.gatewayId) {
@@ -141,16 +200,20 @@ export class Dashboard implements OnInit {
         x: component.x,
         y: component.y
       };
-
+      
       this.gatewayService.updateGateway(component.gatewayId, gateway).subscribe({
-        next: () => console.log('Posición actualizada'),
-        error: (error: any) => console.error('Error al actualizar posición:', error)
+        next: () => {
+          console.log('Posición actualizada en backend');
+        },
+        error: (error: any) => {
+          console.error('Error al actualizar posición:', error);
+        }
       });
     }
   }
 
   getComponentLabel(type: string): string {
-    const labels: Record<string, string> = {
+    const labels: { [key: string]: string } = {
       'decision-gateway': 'Decisión',
       'parallel-gateway': 'Paralelo',
       'exclusive-gateway': 'Exclusivo',
@@ -160,43 +223,50 @@ export class Dashboard implements OnInit {
     return labels[type] || type;
   }
 
-  onComponentSelected(data: { type: string; category: string }): void {
+  onComponentSelected(data: {type: string, category: string}): void {
+    console.log('Componente seleccionado desde el menú:', data);
+    // Agregar en el centro del tablero cuando se hace clic
     this.addComponentToBoard(data.type, data.category, 400, 300);
   }
 
   removeComponent(id: string): void {
     const component = this.boardComponents.find(c => c.id === id);
-
+    
     if (component?.gatewayId && component.category === 'gateway') {
       this.gatewayService.deleteGateway(component.gatewayId).subscribe({
         next: () => {
-          console.log('Gateway eliminado');
+          console.log('Gateway eliminado del backend');
           this.boardComponents = this.boardComponents.filter(c => c.id !== id);
+          console.log('Componentes restantes:', this.boardComponents.length);
         },
         error: (error: any) => {
           console.error('Error al eliminar gateway:', error);
+          // Eliminar localmente aunque falle
           this.boardComponents = this.boardComponents.filter(c => c.id !== id);
         }
       });
     } else {
       this.boardComponents = this.boardComponents.filter(c => c.id !== id);
+      console.log('Componente eliminado localmente:', id);
     }
   }
 
   onComponentDragStart(event: DragEvent, component: BoardComponent): void {
-    if (!event.dataTransfer) return;
-
-    this.isDraggingExisting = true;
-    event.dataTransfer.effectAllowed = 'move';
-    event.dataTransfer.setData('component-id', component.id);
-
-    const target = event.target as HTMLElement;
-    target.classList.add('dragging');
+    if (event.dataTransfer) {
+      this.isDraggingExisting = true;
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('component-id', component.id);
+      
+      const target = event.target as HTMLElement;
+      target.classList.add('dragging');
+      console.log('Iniciando drag de componente existente:', component.id);
+    }
   }
 
   onComponentDragEnd(event: DragEvent): void {
     const target = event.target as HTMLElement;
     target.classList.remove('dragging');
     this.isDraggingExisting = false;
+    console.log('Drag finalizado');
   }
 }

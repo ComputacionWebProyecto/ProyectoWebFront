@@ -36,21 +36,32 @@
           <!-- Renderizado según el tipo de componente -->
           <div [ngSwitch]="component.category">
             
-            <!-- Gateways -->
+            <!-- GATEWAYS -->
             <div *ngSwitchCase="'gateway'" class="gateway-container">
               <div [ngSwitch]="component.type">
+                
                 <!-- Gateway de Decisión -->
                 <div *ngSwitchCase="'decision-gateway'" class="gateway gateway-decision">
                   <svg width="60" height="60" viewBox="0 0 60 60">
-                    <path d="M30 5 L55 30 L30 55 L5 30 Z" 
-                          fill="#DBEAFE" 
-                          stroke="#3B82F6" 
-                          stroke-width="2.5"/>
-                    <text x="30" y="38" text-anchor="middle" font-size="22" font-weight="bold" fill="#3B82F6">?</text>
+                    <path 
+                      d="M30 5 L55 30 L30 55 L5 30 Z" 
+                      fill="#DBEAFE" 
+                      stroke="#3B82F6" 
+                      stroke-width="2.5"
+                    />
+                    <text 
+                      x="30" 
+                      y="38" 
+                      text-anchor="middle" 
+                      font-size="22" 
+                      font-weight="bold" 
+                      fill="#3B82F6">
+                      ?
+                    </text>
                   </svg>
                   <div class="component-label">{{ component.label }}</div>
                 </div>
-                
+
                 <!-- Gateway Paralelo -->
                 <div *ngSwitchCase="'parallel-gateway'" class="gateway gateway-parallel">
                   <svg width="60" height="60" viewBox="0 0 60 60">
@@ -78,7 +89,7 @@
               </div>
             </div>
 
-            <!-- Activity (Tareas) -->
+            <!-- ACTIVITY (Tareas) -->
             <div *ngSwitchCase="'activity'" class="activity-container">
               <div *ngIf="component.type === 'task-user'" class="task task-user">
                 <svg width="100" height="60" viewBox="0 0 100 60">
@@ -96,7 +107,7 @@
               </div>
             </div>
 
-            <!-- Edge (Eventos) -->
+            <!-- EDGE (Eventos) -->
             <div *ngSwitchCase="'edge'" class="event-container">
               <div *ngIf="component.type === 'event-start'" class="event event-start">
                 <svg width="50" height="50" viewBox="0 0 50 50">
