@@ -30,7 +30,7 @@ export class UserService {
     return this.http.get<BackendUserSafeResponse[]>(`${this.baseUrl}/company/${id}/currentUser?currentUserId=${currentUserId}`);
   }
 
-  updateUser(id: number, User: User): Observable<User> {
+  updateUser(User: User): Observable<User> {
     return this.http.put<User>(this.baseUrl, User);
   }
 

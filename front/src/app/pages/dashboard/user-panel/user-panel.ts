@@ -19,6 +19,7 @@ export class UserPanel implements OnInit {
   @Input() isOpen = false;
   users: BackendUserSafeResponse[] = [];
   isCreating = false;
+  editingUser: BackendUserSafeResponse | null = null;
 
   constructor(private userService: UserService, private authService: AuthService, private cdr: ChangeDetectorRef) {
 
@@ -46,7 +47,9 @@ export class UserPanel implements OnInit {
 
   openCreateForm() {
     this.isCreating = true;
+    this.editingUser = null;
   }
+
 
   closePanel() {
     this.isOpen = false;
@@ -56,16 +59,33 @@ export class UserPanel implements OnInit {
     this.isCreating = false;
   }
 
+  editUser(user: BackendUserSafeResponse) {
+    this.editingUser = { ...user };
+    this.isCreating = true;
+  }
+
   saveUser(user: User) {
     const userAuth = this.authService.getUser();
     user.companyId = userAuth?.company.id;
-    this.userService.createUser(user).subscribe({
-      next: () => {
-        this.isCreating = false;
-        this.loadUsers();
-      },
-      error: (err) => console.log('Error creating user: ', err)
-    });
+    if (this.editingUser) {
+      console.log("datos usuario act: ", user);
+      this.userService.updateUser(user).subscribe({
+        next: () => {
+          this.isCreating = false;
+          this.editingUser = null;
+          this.loadUsers();
+        }
+      })
+    } else {
+      this.userService.createUser(user).subscribe({
+        next: () => {
+          this.isCreating = false;
+          this.loadUsers();
+        },
+        error: (err) => console.log('Error creating user: ', err)
+      });
+
+    }
   }
 
   deleteUser(userId: number) {
@@ -74,7 +94,6 @@ export class UserPanel implements OnInit {
     this.userService.deleteUser(userId).subscribe({
       next: () => {
         console.log('Usuario eliminado con éxito');
-        // actualiza la lista sin recargar
         this.loadUsers();
         console.log('Lista actualizada con éxito');
       },
