@@ -4,13 +4,15 @@ import { FormsModule } from '@angular/forms';
 import { User } from '../../../../../models/User';
 import { AuthService } from '../../../../../services/auth.service';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+//import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { Registration } from '../../../../../models/Registration';
 
 @Component({
   selector: 'app-register',
   standalone: true,
-  imports: [FormsModule, CommonModule],
+  //imports: [FormsModule, CommonModule],
+  imports: [FormsModule, CommonModule, RouterLink],
   templateUrl: './register.html',
   styleUrl: './register.css'
 })
@@ -27,7 +29,4 @@ export class Register {
     const data = new Registration(this.company, this.user);
     this.registerData.emit(data); 
   }
-
-
-
 }

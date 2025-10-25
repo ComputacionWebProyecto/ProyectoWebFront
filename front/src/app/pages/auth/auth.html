@@ -3,9 +3,12 @@
     <div class="w-1/2 bg-grid">
       <app-left-panel></app-left-panel>
     </div>
-
+    
     <div class="w-1/2 bg-black">
-      <app-right-panel (register)="onRegisterSubmit($event)"></app-right-panel>
+      <app-right-panel 
+        (registerData)="onRegisterSubmit($event)"
+        (loginData)="onLoginSubmit($event)">
+      </app-right-panel>
     </div>
   </div>
 </div>

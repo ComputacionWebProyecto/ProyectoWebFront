@@ -64,12 +64,18 @@
 
 /* Gateways */
 .gateway {
+  width: 80px;
+  height: 80px;
+  border: 3px solid #3b82f6; /* azul */
+  background-color: #e0f2fe;
+  border-radius: 50%;
   display: flex;
-  align-items: center;
   justify-content: center;
-  position: relative;
-  background: transparent; /* Sin fondo blanco */
+  align-items: center;
+  cursor: move;
+  user-select: none;
 }
+
 
 .gateway svg {
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));

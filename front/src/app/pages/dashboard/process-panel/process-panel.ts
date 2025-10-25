@@ -1,10 +1,11 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, Input } from '@angular/core';
 import { CommonModule } from '@angular/common'; // Para NgIf y NgFor
 import { ProcessService } from '../../../services/process.service';
 import { Process } from '../../../models/Process';
 import { ProcessList } from '../process-list/process-list';
 import { ProcessForm } from '../process-form/process-form';
 import { AuthService } from '../../../services/auth.service';
+import { BackendProcessResponse } from '../../../models/BackendProcessResponse';
 
 
 @Component({
@@ -15,22 +16,30 @@ import { AuthService } from '../../../services/auth.service';
   styleUrl: './process-panel.css'
 })
 export class ProcessPanel implements OnInit {
-  @Input() isOpen = true; 
-  processes: Process[] = [];
+  @Input() isOpen = false; 
+  processes: BackendProcessResponse[] = [];
   isCreating = false; // Formulario o lista
 
- constructor(private processService: ProcessService, private authService: AuthService) {}
+ constructor(private processService: ProcessService, private authService: AuthService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void {
     this.loadProcesses();
   }
 
-  loadProcesses() {
-    this.processService.getProcesses().subscribe({
-      next: (data: Process[]) => this.processes = data,
-      error: (err: any) => console.error('Error loading processes', err)
-    });
-  }
+   loadProcesses() {
+    const user = this.authService.getUser();
+      console.log("datos usuario: ", user);
+      const companyId = user?.company?.id;
+      if (typeof companyId === 'number') {
+        this.processService.getProcessesByCompanyId(companyId).subscribe({
+          next: (data: BackendProcessResponse[]) => {
+            this.processes = [...data];
+            this.cdr.detectChanges();
+          },
+          error: (err) => console.log("Error loading users: ", err)
+        });
+      }
+    }
 
   openCreateForm() {
     this.isCreating = true;
@@ -59,9 +68,16 @@ export class ProcessPanel implements OnInit {
   }
 
   deleteProcess(processId: number) {
+    if (!confirm('¿Estás seguro de que deseas eliminar este proceso?')) return;
+
     this.processService.deleteProcess(processId).subscribe({
-      next: () => this.loadProcesses(),
-      error: (err) => console.error('Error deleting process', err)
+      next: () => {
+        console.log('Usuario eliminado con éxito');
+        // actualiza la lista sin recargar
+        this.loadProcesses();
+        console.log('Lista actualizada con éxito');
+      },
+      error: (err) => console.log('Error eliminando proceso: ', err)
     });
   }
 }

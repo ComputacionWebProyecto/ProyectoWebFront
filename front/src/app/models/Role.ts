@@ -11,7 +11,5 @@ export class Role{
         this.id = id;
         this.companyId = companyId;
     }
-
-
     
 }

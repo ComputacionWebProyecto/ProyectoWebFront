@@ -7,7 +7,7 @@ import { Gateway } from '../models/Gateway';
   providedIn: 'root'
 })
 export class GatewayService {
-  private baseUrl = 'http://localhost:8080/api/gateways'; 
+  private baseUrl = 'http://localhost:8080/api/gateway'; // ✅ Cambiar de 'gateways' a 'gateway'
 
   constructor(private http: HttpClient) {}
 
@@ -23,15 +23,11 @@ export class GatewayService {
     return this.http.get<Gateway>(`${this.baseUrl}/${id}`);
   }
 
-  getGatewaysByProcess(processId: number): Observable<Gateway[]> {
-    return this.http.get<Gateway[]>(`${this.baseUrl}/process/${processId}`);
-  }
-
   updateGateway(id: number, gateway: Gateway): Observable<Gateway> {
-    return this.http.put<Gateway>(`${this.baseUrl}/${id}`, gateway);
+    return this.http.put<Gateway>(this.baseUrl, gateway);
   }
 
   deleteGateway(id: number): Observable<any> {
-    return this.http.patch(`${this.baseUrl}/${id}`, { status: 'inactive' });
+    return this.http.delete(`${this.baseUrl}/${id}`);
   }
 }

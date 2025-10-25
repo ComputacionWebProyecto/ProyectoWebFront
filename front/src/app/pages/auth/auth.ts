@@ -1,18 +1,20 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { LeftPanel } from './components/left-panel/left-panel';
 import { RightPanel } from './components/right-panel/right-panel';
 import { AuthService } from '../../services/auth.service';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { Registration } from '../../models/Registration';
+import { LoginRequest } from '../../models/Login';
+import { BackendUserResponse } from '../../models/BackendUserResponse';
 
 @Component({
   selector: 'app-auth',
   standalone: true,
-  imports: [LeftPanel, RightPanel],
+  imports: [LeftPanel, RightPanel, RouterModule],
   templateUrl: './auth.html',
   styleUrl: './auth.css'
 })
-export class Auth {
+export class Auth implements OnInit {
 
   constructor(private authService: AuthService, private router: Router) { }
 
@@ -21,6 +23,7 @@ export class Auth {
       this.router.navigate(['/dashboard']);
     }
   }
+
   onRegisterSubmit(data: Registration) {
     this.authService.registrar(data).subscribe({
       next: (createdUser) => {
@@ -34,4 +37,18 @@ export class Auth {
     });
   }
 
+  onLoginSubmit(credentials: LoginRequest) {
+    console.log('Intentando login con credenciales:', credentials);
+    this.authService.login(credentials).subscribe({
+      next: (response: BackendUserResponse) => {
+        console.log('Login exitoso:', response);
+        this.authService.setUser(response);
+        this.router.navigate(['/dashboard']);
+      },
+      error: (err) => {
+        console.log('Error en login:', err);
+        alert(err.error?.message || 'Error al iniciar sesión');
+      }
+    });
+  }
 }
