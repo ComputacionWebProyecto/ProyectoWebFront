@@ -1,7 +1,18 @@
-import { Component, EventEmitter, Output, inject, signal } from '@angular/core';
+import {
+  Component,
+  EventEmitter,
+  Input,
+  OnChanges,
+  OnInit,
+  OnDestroy,
+  SimpleChanges,
+  Output,
+  inject,
+  signal,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { Observable } from 'rxjs';
+import { Observable, Subscription } from 'rxjs';
 
 import { Activity } from '../../../models/Activity';
 import { ActivityService } from '../../../services/activity.service';
@@ -13,19 +24,27 @@ import { ActivityService } from '../../../services/activity.service';
   templateUrl: './activity-panel.html',
   styleUrls: ['./activity-panel.css'],
 })
-export class ActivityPanel {
+export class ActivityPanel implements OnInit, OnChanges, OnDestroy {
+  /** id que viene del Dashboard para editar un item concreto */
+  @Input() activityId: number | null = null;
+
   /** Permite que el padre oculte el panel al hacer clic en la “X” */
   @Output() close = new EventEmitter<void>();
 
   private fb = inject(FormBuilder);
   private service = inject(ActivityService);
 
-  /** Stream de actividades (solo lectura) */
-  readonly activities$: Observable<Activity[]> = this.service.list$;
+  /** Stream de actividades (solo lectura). Ajusta aquí si tu servicio usa otro nombre. */
+  readonly activities$: Observable<Activity[]> =
+    (this.service as any).list$ ?? (this.service as any).items$;
 
   /** Estado de edición */
   readonly isEditing = signal(false);
   readonly selected = signal<Activity | null>(null);
+
+  /** Último snapshot del stream para poder buscar por id cuando cambia el @Input */
+  private snapshot: Activity[] = [];
+  private sub?: Subscription;
 
   /**
    * Formulario
@@ -44,6 +63,39 @@ export class ActivityPanel {
     processId: this.fb.control<number | undefined>(undefined, { nonNullable: true }),
     roleId: this.fb.control<number | undefined>(undefined, { nonNullable: true }),
   });
+
+  ngOnInit(): void {
+    // Mantén un snapshot del stream para poder resolver el @Input activityId
+    if (this.activities$) {
+      this.sub = this.activities$.subscribe((list) => {
+        this.snapshot = list ?? [];
+        this.applyInputSelection(); // si ya hay un activityId, intenta cargarlo
+      });
+    } else {
+      console.warn('[ActivityPanel] No encontré stream de actividades (list$ / items$).');
+    }
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if ('activityId' in changes) {
+      this.applyInputSelection();
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.sub?.unsubscribe();
+  }
+
+  /** Busca en el snapshot y carga en edición si hay activityId */
+  private applyInputSelection(): void {
+    if (this.activityId == null) {
+      // Volver a modo “crear” si no hay selección
+      if (this.isEditing()) this.resetForm();
+      return;
+    }
+    const found = this.snapshot.find((a) => a.id === this.activityId);
+    if (found) this.edit(found);
+  }
 
   /** Devuelve el id si está editando (para el botón Crear/Actualizar) */
   editingId(): number | undefined {
@@ -67,11 +119,17 @@ export class ActivityPanel {
       y: raw.y,
       width: raw.width,
       height: raw.height,
-      processId: raw.processId, // `undefined` permitido
-      roleId: raw.roleId,       // `undefined` permitido
+      processId: raw.processId,
+      roleId: raw.roleId,
     };
 
-    this.service.create(payload).subscribe(() => this.resetForm());
+    const maybe$ = (this.service as any).create?.(payload);
+    if (maybe$?.subscribe) {
+      maybe$.subscribe(() => this.resetForm());
+    } else {
+      (this.service as any).create?.(payload);
+      this.resetForm();
+    }
   }
 
   /** Cargar datos en el form para editar */
@@ -86,8 +144,8 @@ export class ActivityPanel {
       y: item.y ?? 100,
       width: item.width ?? 140,
       height: item.height ?? 80,
-      processId: item.processId ?? undefined,
-      roleId: item.roleId ?? undefined,
+      processId: (item as any).processId ?? undefined,
+      roleId: (item as any).roleId ?? undefined,
     });
   }
 
@@ -105,17 +163,28 @@ export class ActivityPanel {
       y: raw.y,
       width: raw.width,
       height: raw.height,
-      processId: raw.processId, // number | undefined
-      roleId: raw.roleId,       // number | undefined
+      processId: raw.processId,
+      roleId: raw.roleId,
     };
 
-    this.service.update(merged).subscribe(() => this.resetForm());
+    const maybe$ = (this.service as any).update?.(merged);
+    if (maybe$?.subscribe) {
+      maybe$.subscribe(() => this.resetForm());
+    } else {
+      (this.service as any).update?.(merged);
+      this.resetForm();
+    }
   }
 
   /** Eliminar por id */
   remove(id: number | undefined): void {
     if (id == null) return;
-    this.service.delete(id).subscribe();
+    const maybe$ = (this.service as any).delete?.(id);
+    if (maybe$?.subscribe) {
+      maybe$.subscribe();
+    } else {
+      (this.service as any).delete?.(id);
+    }
     if (this.selected()?.id === id) this.resetForm();
   }
 
@@ -140,8 +209,8 @@ export class ActivityPanel {
       y: 100,
       width: 140,
       height: 80,
-      processId: undefined, // NO null
-      roleId: undefined,    // NO null
+      processId: undefined,
+      roleId: undefined,
     });
   }
 }

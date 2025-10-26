@@ -27,21 +27,21 @@
 
 .board-component:hover {
   transform: scale(1.05);
-  z-index: 10;
+  z-index: 30;
   filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.15));
 }
 
 .board-component:active {
   cursor: grabbing;
   transform: scale(1.08);
-  z-index: 20;
+  z-index: 40;
 }
 
 /* Durante el arrastre */
 .board-component.dragging {
   opacity: 0.7;
   cursor: grabbing;
-  z-index: 100;
+  z-index: 40;
 }
 
 /* Contenedores de componentes - SIN fondo */
@@ -227,7 +227,7 @@
   .board-component {
     transform: scale(0.9);
   }
-  
+
   .board-component:hover {
     transform: scale(0.95);
   }

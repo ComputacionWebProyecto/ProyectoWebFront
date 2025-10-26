@@ -1,12 +1,17 @@
 export interface Activity {
   id?: number;
-  name: string;
+  name?: string;
   description?: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
+
+  // Posición y tamaño en el board
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+
+  // Relaciones opcionales
   processId?: number;
   roleId?: number;
+
   status?: 'active' | 'inactive';
 }

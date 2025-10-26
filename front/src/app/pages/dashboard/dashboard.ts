@@ -11,7 +11,6 @@ import { RolePanel } from './role-panel/role-panel';
 import { ActivityPanel } from './activity/activity-panel';
 import { EdgePanel } from './edge/edge-panel';
 
-
 import { Activity } from '../../models/Activity';
 import { Edge } from '../../models/Edge';
 import { ActivityService } from '../../services/activity.service';
@@ -26,9 +25,10 @@ interface BoardComponent {
   label?: string;
   gatewayId?: number;
 
-  //ids de entidades
+  // ids de entidades
   activityId?: number;
   edgeId?: number;
+
   // Para trazar edges y centrar activities
   fromId?: number;
   toId?: number;
@@ -48,18 +48,28 @@ export class Dashboard implements OnInit {
   isProcessPanelOpen = false;
   isUserPanelOpen = false;
   isRolePanelOpen = false;
+
+  // Inspector lateral (activity/edge)
   inspectorOpen = false;
   inspectorKind: 'activity' | 'edge' | null = null;
+
+  // NUEVO: IDs seleccionados (para paneles)
+  selectedActivityId: number | null = null;
+  selectedEdgeId: number | null = null;
 
   boardComponents: BoardComponent[] = [];
   private componentCounter = 0;
   private isDraggingExisting = false;
 
-  // NUEVO: capas/caché locales (no afectan gateways)
+  // Capas/caché locales (no afectan gateways)
   private activitiesLayer: BoardComponent[] = [];
   private edgesLayer: BoardComponent[] = [];
   private activitiesCache: Activity[] = [];
   private edgesCache: Edge[] = [];
+
+  // Seguimiento de ids ya vistos para detectar “nuevo creado”
+  private seenActivityIds = new Set<number>();
+  private seenEdgeIds = new Set<number>();
 
   constructor(
     private gatewayService: GatewayService,
@@ -67,10 +77,22 @@ export class Dashboard implements OnInit {
     private edgeService: EdgeService,
   ) {}
 
+  // Mapa de etiquetas legibles para la UI
+  getComponentLabel(type: string): string {
+    const labels: Record<string, string> = {
+      'decision-gateway': 'Decisión',
+      'parallel-gateway': 'Paralelo',
+      'exclusive-gateway': 'Exclusivo',
+      'task-user': 'Tarea de Usuario',
+      'event-start': 'Evento Inicio',
+    };
+    return labels[type] ?? type;
+  }
+
   ngOnInit(): void {
     // Gateways (dev)
     this.loadGateways();
-    // NUEVO: streams Activity/Edge
+    // Streams Activity/Edge
     this.subscribeActivitiesStream();
     this.subscribeEdgesStream();
   }
@@ -78,7 +100,7 @@ export class Dashboard implements OnInit {
   loadGateways(): void {
     this.gatewayService.getGateways().subscribe({
       next: (gateways: Gateway[]) => {
-        // Mantengo exactamente tu comportamiento de dev
+        // Mantengo exactamente el comportamiento de dev
         this.boardComponents = [];
         gateways.forEach((gateway: Gateway) => {
           if (gateway.status === 'active' && gateway.id) {
@@ -93,7 +115,7 @@ export class Dashboard implements OnInit {
             });
           }
         });
-        // NUEVO: sumar capas actuales Activity/Edge sin tocar gateways
+        // Sumar capas actuales Activity/Edge sin tocar gateways
         this.recomputeBoardIncludeCurrentGateways();
       },
       error: (error: any) => {
@@ -129,6 +151,7 @@ export class Dashboard implements OnInit {
     this.isSidebarOpen = !this.isSidebarOpen;
   }
 
+  // ======== Drag & Drop en el tablero ========
   onBoardDrop(event: DragEvent): void {
     event.preventDefault();
 
@@ -149,10 +172,19 @@ export class Dashboard implements OnInit {
         if (component.gatewayId && component.category === 'gateway') {
           this.updateGatewayPosition(component);
         }
-        // NUEVO: si es Activity, reflejar en servicio in-memory
+
+        // Si es Activity, reflejar en servicio in-memory
         if (component.category === 'activity' && component.activityId != null) {
           this.updateActivityPosition(component);
         }
+
+        // Si es Edge, reflejar en la capa local para no "rebotar"
+        if (component.category === 'edge' && component.edgeId != null) {
+          this.edgesLayer = this.edgesLayer.map(c =>
+            c.id === component.id ? { ...c, x: component.x, y: component.y } : c
+          );
+        }
+
         // refrescar mezcla
         this.recomputeBoardAfterLocalMove(component);
       }
@@ -168,6 +200,11 @@ export class Dashboard implements OnInit {
         const y = event.clientY - rect.top;
 
         this.addComponentToBoard(componentType, componentCategory, x, y);
+
+        // Abrir inspector al crear Activity/Edge por DnD
+        if (componentCategory === 'activity' || componentCategory === 'edge') {
+          this.openInspector(componentCategory as 'activity' | 'edge');
+        }
       }
     }
 
@@ -181,6 +218,37 @@ export class Dashboard implements OnInit {
     }
   }
 
+  onComponentDragStart(event: DragEvent, component: BoardComponent): void {
+    if (event.dataTransfer) {
+      this.isDraggingExisting = true;
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('component-id', component.id);
+
+      const target = event.target as HTMLElement;
+      target.classList.add('dragging');
+      console.log('Iniciando drag de componente existente:', component.id);
+
+      // Seleccionar al empezar a mover (para abrir/mostrar panel correcto)
+      if (component.category === 'activity') {
+        this.selectedActivityId = component.activityId ?? null;
+        this.inspectorKind = 'activity';
+        this.inspectorOpen = true;
+      } else if (component.category === 'edge') {
+        this.selectedEdgeId = component.edgeId ?? null;
+        this.inspectorKind = 'edge';
+        this.inspectorOpen = true;
+      }
+    }
+  }
+
+  onComponentDragEnd(event: DragEvent): void {
+    const target = event.target as HTMLElement;
+    target.classList.remove('dragging');
+    this.isDraggingExisting = false;
+    console.log('Drag finalizado');
+  }
+
+  // ======== Alta de componentes ========
   addComponentToBoard(type: string, category: string, x: number, y: number): void {
     console.log(' Agregando componente:', type, category, 'en posición:', x, y);
 
@@ -226,7 +294,7 @@ export class Dashboard implements OnInit {
       return;
     }
 
-    // === NUEVO: alta in-memory para activity / edge ===
+    // === Alta in-memory para activity / edge (NO forzar recompute aquí) ===
     if (category === 'activity') {
       const a: Activity = {
         name: 'Activity',
@@ -238,28 +306,25 @@ export class Dashboard implements OnInit {
         status: 'active'
       };
       const svc: any = this.activityService as any;
-      if (typeof svc.create === 'function') svc.create(a);
-      else if (typeof svc.add === 'function') svc.add(a);
-      else if (typeof svc.new === 'function') svc.new(a);
+      if (typeof svc.create === 'function')      svc.create(a);
+      else if (typeof svc.add === 'function')    svc.add(a);
+      else if (typeof svc.new === 'function')    svc.new(a);
       else console.warn('[Dashboard] ActivityService no expone create/add/new');
-
-      this.recomputeBoardIncludeCurrentGateways();
       return;
     }
 
     if (category === 'edge') {
       const e: Edge = { label: 'Edge', status: 'active' };
       const svc: any = this.edgeService as any;
-      if (typeof svc.create === 'function') svc.create(e);
-      else if (typeof svc.add === 'function') svc.add(e);
-      else if (typeof svc.new === 'function') svc.new(e);
+      if (typeof svc.create === 'function')      svc.create(e);
+      else if (typeof svc.add === 'function')    svc.add(e);
+      else if (typeof svc.new === 'function')    svc.new(e);
       else console.warn('[Dashboard] EdgeService no expone create/add/new');
-
-      this.recomputeBoardIncludeCurrentGateways();
       return;
     }
   }
 
+  // ======== Persistencia gateways ========
   updateGatewayPosition(component: BoardComponent): void {
     if (component.gatewayId) {
       const gateway: Gateway = {
@@ -277,20 +342,18 @@ export class Dashboard implements OnInit {
     }
   }
 
-  getComponentLabel(type: string): string {
-    const labels: { [key: string]: string } = {
-      'decision-gateway': 'Decisión',
-      'task-user': 'Tarea de Usuario',
-      'event-start': 'Evento Inicio'
-    };
-    return labels[type] || 'Decisión';
-  }
-
+  // ======== Menú lateral ========
   onComponentSelected(data: { type: string, category: string }): void {
     console.log('Componente seleccionado desde el menú:', data);
     this.addComponentToBoard(data.type, data.category, 400, 300);
+
+    // Abrir inspector al crear desde click
+    if (data.category === 'activity' || data.category === 'edge') {
+      this.openInspector(data.category as 'activity' | 'edge');
+    }
   }
 
+  // ======== Eliminar ========
   removeComponent(id: string): void {
     const component = this.boardComponents.find(c => c.id === id);
 
@@ -308,15 +371,15 @@ export class Dashboard implements OnInit {
       return;
     }
 
-    // NUEVO: reflejar eliminación en servicios in-memory si tenemos IDs
+    // reflejar eliminación en servicios in-memory si tenemos IDs
     if (component?.category === 'activity' && component.activityId != null) {
       const svc: any = this.activityService as any;
-      if (typeof svc.delete === 'function') svc.delete(component.activityId);
+      if (typeof svc.delete === 'function')      svc.delete(component.activityId);
       else if (typeof svc.remove === 'function') svc.remove(component.activityId);
       else console.warn('[Dashboard] ActivityService no expone delete/remove');
     } else if (component?.category === 'edge' && component.edgeId != null) {
       const svc: any = this.edgeService as any;
-      if (typeof svc.delete === 'function') svc.delete(component.edgeId);
+      if (typeof svc.delete === 'function')      svc.delete(component.edgeId);
       else if (typeof svc.remove === 'function') svc.remove(component.edgeId);
       else console.warn('[Dashboard] EdgeService no expone delete/remove');
     }
@@ -325,36 +388,26 @@ export class Dashboard implements OnInit {
     this.boardComponents = this.boardComponents.filter(c => c.id !== id);
   }
 
-  onComponentDragStart(event: DragEvent, component: BoardComponent): void {
-    if (event.dataTransfer) {
-      this.isDraggingExisting = true;
-      event.dataTransfer.effectAllowed = 'move';
-      event.dataTransfer.setData('component-id', component.id);
-
-      const target = event.target as HTMLElement;
-      target.classList.add('dragging');
-      console.log('Iniciando drag de componente existente:', component.id);
-    }
-  }
-
-  onComponentDragEnd(event: DragEvent): void {
-    const target = event.target as HTMLElement;
-    target.classList.remove('dragging');
-    this.isDraggingExisting = false;
-    console.log('Drag finalizado');
-  }
-
-  // --- Inspector “no-op” para que el template compile si lo usas ---
-  openInspector(kind: 'activity' | 'edge'): void {
+  // --- Inspector ---
+  openInspector(kind: 'activity' | 'edge', component?: BoardComponent): void {
     this.inspectorKind = kind;
     this.inspectorOpen = true;
+
+    // Si pasamos el componente (lo haremos al hacer click más adelante), fija la selección
+    if (component) {
+      if (kind === 'activity') this.selectedActivityId = component.activityId ?? null;
+      if (kind === 'edge')     this.selectedEdgeId = component.edgeId ?? null;
+    }
   }
 
   closeInspector(): void {
     this.inspectorOpen = false;
     this.inspectorKind = null;
+    this.selectedActivityId = null;
+    this.selectedEdgeId = null;
   }
 
+  // ======== Líneas SVG (edges conectados) ========
   // Calcula las coordenadas de la línea de un edge. Si no hay from/to válidos, no dibuja (null).
   edgeCoordsByComponent(edgeCmp: BoardComponent): { x1: number; y1: number; x2: number; y2: number } | null {
     if (edgeCmp.category !== 'edge' || edgeCmp.fromId == null || edgeCmp.toId == null) return null;
@@ -394,6 +447,15 @@ export class Dashboard implements OnInit {
           label: a.name ?? 'Activity',
           activityId: a.id,
         }));
+
+        // Detectar si hay un “nuevo” para seleccionarlo automáticamente
+        const ids = this.activitiesCache.map(a => a.id).filter((id): id is number => id != null);
+        const newId = ids.find(id => !this.seenActivityIds.has(id));
+        this.seenActivityIds = new Set(ids);
+        if (newId != null && this.inspectorOpen && this.inspectorKind === 'activity') {
+          this.selectedActivityId = newId;
+        }
+
         this.recomputeBoardIncludeCurrentGateways();
       });
     } else {
@@ -429,6 +491,15 @@ export class Dashboard implements OnInit {
           fromId: e.fromId,
           toId: e.toId,
         }));
+
+        // Detectar nuevo edge para seleccionarlo si abrimos inspector al crear
+        const ids = this.edgesCache.map(e => e.id).filter((id): id is number => id != null);
+        const newId = ids.find(id => !this.seenEdgeIds.has(id));
+        this.seenEdgeIds = new Set(ids);
+        if (newId != null && this.inspectorOpen && this.inspectorKind === 'edge') {
+          this.selectedEdgeId = newId;
+        }
+
         this.recomputeBoardIncludeCurrentGateways();
       });
     } else {
@@ -436,7 +507,7 @@ export class Dashboard implements OnInit {
     }
   }
 
-  // ===== NUEVO: helpers de mezcla/actualización =====
+  // ===== Helpers de mezcla/actualización =====
   private updateActivityPosition(component: BoardComponent): void {
     if (component.category !== 'activity' || component.activityId == null) return;
 
@@ -470,6 +541,10 @@ export class Dashboard implements OnInit {
   private recomputeBoardAfterLocalMove(component: BoardComponent): void {
     if (component.category === 'activity') {
       this.activitiesLayer = this.activitiesLayer.map((c) =>
+        c.id === component.id ? { ...c, x: component.x, y: component.y } : c
+      );
+    } else if (component.category === 'edge') {
+      this.edgesLayer = this.edgesLayer.map((c) =>
         c.id === component.id ? { ...c, x: component.x, y: component.y } : c
       );
     }

@@ -1,48 +1,77 @@
-<section class="panel">
-  <h2 class="panel-title">Edges</h2>
+<section class="panel" aria-labelledby="edge-title">
+  <!-- Título + botón cerrar -->
+  <div class="flex items-center justify-between mb-4">
+    <h2 id="edge-title" class="panel-title">Edges</h2>
 
-  <form [formGroup]="form" (ngSubmit)="submit()" class="form">
+    <!-- Botón cerrar (emite close) -->
+    <button
+      type="button"
+      (click)="onClose()"
+      aria-label="Cerrar panel"
+      class="rounded-md p-2
+             text-slate-500 hover:text-slate-900
+             dark:text-slate-300 dark:hover:text-white
+             hover:bg-slate-100 dark:hover:bg-slate-800">
+      &times;
+    </button>
+  </div>
+
+  <!-- Formulario -->
+  <form [formGroup]="form" (ngSubmit)="submit()" class="form" novalidate>
     <div class="row">
-      <label>Proceso (opcional)</label>
+      <label for="processId">Proceso (opcional)</label>
       <input
+        id="processId"
         type="number"
         formControlName="processId"
         placeholder="Ej: 10"
-        min="1"
-      />
+        min="1" />
     </div>
 
     <div class="row">
-      <label>Desde (Activity ID)</label>
+      <label for="activitySourceId">Desde (Activity ID)</label>
       <input
+        id="activitySourceId"
         type="number"
         formControlName="activitySourceId"
         placeholder="Ej: 1"
         min="1"
-      />
+        aria-required="true" />
       <small class="error"
-        *ngIf="form.get('activitySourceId')?.invalid && form.get('activitySourceId')?.touched">
-        Requerido (>= 1)
+             *ngIf="form.get('activitySourceId')?.touched && form.get('activitySourceId')?.errors as e">
+        <ng-container *ngIf="e['required']">Requerido.</ng-container>
+        <ng-container *ngIf="e['min']">Debe ser &ge; 1.</ng-container>
       </small>
     </div>
 
     <div class="row">
-      <label>Hacia (Activity ID)</label>
+      <label for="activityDestinyId">Hacia (Activity ID)</label>
       <input
+        id="activityDestinyId"
         type="number"
         formControlName="activityDestinyId"
         placeholder="Ej: 2"
         min="1"
-      />
+        aria-required="true" />
       <small class="error"
-        *ngIf="form.get('activityDestinyId')?.invalid && form.get('activityDestinyId')?.touched">
-        Requerido (>= 1)
+             *ngIf="form.get('activityDestinyId')?.touched && form.get('activityDestinyId')?.errors as e">
+        <ng-container *ngIf="e['required']">Requerido.</ng-container>
+        <ng-container *ngIf="e['min']">Debe ser &ge; 1.</ng-container>
       </small>
     </div>
 
     <div class="row">
-      <label>Etiqueta</label>
-      <input formControlName="label" placeholder="Condición/Nombre del flujo" />
+      <label for="label">Etiqueta</label>
+      <input
+        id="label"
+        formControlName="label"
+        placeholder="Condición/Nombre del flujo"
+        aria-required="true" />
+      <small class="error"
+             *ngIf="form.get('label')?.touched && form.get('label')?.errors as e">
+        <ng-container *ngIf="e['required']">Requerido.</ng-container>
+        <ng-container *ngIf="e['minlength']">Debe tener al menos 1 carácter.</ng-container>
+      </small>
     </div>
 
     <div class="actions">
@@ -53,8 +82,9 @@
     </div>
   </form>
 
+  <!-- Lista de edges -->
   <ul class="list">
-    <li *ngFor="let e of (edges$ | async)">
+    <li *ngFor="let e of (edges$ | async); trackBy: trackById">
       <div class="item-main">
         <strong>#{{ e.id }}</strong>
         <span class="muted">&nbsp;{{ e.activitySourceId }} → {{ e.activityDestinyId }}</span>
@@ -62,8 +92,8 @@
         <span class="muted" *ngIf="e.label">&nbsp;— {{ e.label }}</span>
       </div>
       <div class="item-actions">
-        <button (click)="edit(e)">Editar</button>
-        <button (click)="remove(e.id!)">Eliminar</button>
+        <button type="button" (click)="edit(e)">Editar</button>
+        <button type="button" (click)="remove(e.id!)">Eliminar</button>
       </div>
     </li>
   </ul>

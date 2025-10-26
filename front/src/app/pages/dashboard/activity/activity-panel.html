@@ -1,7 +1,9 @@
 <section class="panel" aria-labelledby="activity-title">
   <!-- Título + botón cerrar -->
   <div class="flex items-center justify-between mb-4">
-    <h2 id="activity-title" class="panel-title">Activities</h2>
+    <h2 id="activity-title" class="panel-title">
+      {{ editingId() ? 'Editar actividad' : 'Nueva actividad' }}
+    </h2>
 
     <!-- Botón cerrar (emite close) -->
     <button
@@ -55,8 +57,8 @@
   </form>
 
   <!-- Lista de actividades -->
-  <ul class="list">
-    <li *ngFor="let a of (activities$ | async)">
+  <ul class="list" *ngIf="(activities$ | async) as items; else emptyState">
+    <li *ngFor="let a of items">
       <div class="item-main">
         <strong class="block truncate">{{ a.name }}</strong>
         <span class="muted" *ngIf="a.description">&nbsp;— {{ a.description }}</span>
@@ -67,4 +69,8 @@
       </div>
     </li>
   </ul>
+
+  <ng-template #emptyState>
+    <p class="text-sm text-slate-500 mt-2">Aún no hay actividades.</p>
+  </ng-template>
 </section>
