@@ -1,6 +1,7 @@
 <ul class="space-y-3">
   <li *ngFor="let process of processes" 
-      class="flex flex-col p-4 bg-gray-50 rounded-lg shadow-sm hover:bg-gray-100 transition">
+      class="flex flex-col p-4 bg-gray-50 rounded-lg shadow-sm hover:bg-gray-100 transition cursor-pointer"
+      (click)="selectProcess(process.id)">
     
     <!-- Contenido -->
     <div class="flex justify-between items-center">

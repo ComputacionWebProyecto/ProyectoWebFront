@@ -9,6 +9,7 @@ import { UserPanel } from './user-panel/user-panel';
 
 import { RolePanel } from './role-panel/role-panel'; // NUEVO
 import { ActiveProcessService } from '../../services/active-process.service';
+import { Subscription } from 'rxjs';
 
 interface BoardComponent {
   id: string;
@@ -36,15 +37,29 @@ export class Dashboard implements OnInit {
   boardComponents: BoardComponent[] = [];
   private componentCounter = 0;
   private isDraggingExisting = false;
+  private processSubscription?: Subscription;
+  currentProcessId: number | null = null;
 
   constructor(private gatewayService: GatewayService, private activeProcessService: ActiveProcessService) { }
 
   ngOnInit(): void {
-    // Cargar gateways existentes solo al iniciar
-    this.loadGateways();
-    const savedId = localStorage.getItem('activeProcessId');
-    if (savedId) {
-      this.activeProcessService.setActiveProcess(Number(savedId));
+    this.activeProcessService.restoreActiveProcess();
+
+    this.processSubscription = this.activeProcessService.activeProcessId$
+      .subscribe(processId => {
+        console.log('Proceso activo cambió a:', processId);
+
+        this.currentProcessId = processId;
+        if (processId) {
+          this.loadGateways();
+        } else {
+          this.boardComponents = [];
+        }
+      });
+  }
+  ngOnDestroy(): void {
+    if (this.processSubscription) {
+      this.processSubscription.unsubscribe();
     }
   }
 

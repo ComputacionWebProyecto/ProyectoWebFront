@@ -35,4 +35,9 @@ export class ActiveProcessService {
       localStorage.removeItem('activeProcessId');
     }
   }
+  restoreActiveProcess(): void {
+    const savedId = localStorage.getItem('activeProcessId');
+    console.log('proceso activo: ', savedId);
+    if (savedId) this.activeProcessIdSubject.next(parseInt(savedId, 10));
+  }
 }
