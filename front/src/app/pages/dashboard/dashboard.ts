@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DropdownMenuComponent } from "./drop-menu/drop-menu";
 import { HeaderDashboard } from './header-dashboard/header-dashboard';
@@ -40,7 +40,7 @@ export class Dashboard implements OnInit {
   private processSubscription?: Subscription;
   currentProcessId: number | null = null;
 
-  constructor(private gatewayService: GatewayService, private activeProcessService: ActiveProcessService) { }
+  constructor(private gatewayService: GatewayService, private activeProcessService: ActiveProcessService, private cdr: ChangeDetectorRef) { }
 
   ngOnInit(): void {
     this.activeProcessService.restoreActiveProcess();
@@ -55,6 +55,8 @@ export class Dashboard implements OnInit {
         } else {
           this.boardComponents = [];
         }
+
+        this.cdr.detectChanges();
       });
   }
   ngOnDestroy(): void {
@@ -83,6 +85,7 @@ export class Dashboard implements OnInit {
           }
         });
         console.log('Gateways cargados desde backend:', this.boardComponents);
+        this.cdr.detectChanges();
       },
       error: (error: any) => {
         console.error('Error al cargar gateways:', error);
@@ -287,6 +290,7 @@ export class Dashboard implements OnInit {
           console.log('Gateway eliminado del backend');
           this.boardComponents = this.boardComponents.filter(c => c.id !== id);
           console.log('Componentes restantes:', this.boardComponents.length);
+          this.cdr.detectChanges();
         },
         error: (error: any) => {
           console.error('Error al eliminar gateway:', error);
