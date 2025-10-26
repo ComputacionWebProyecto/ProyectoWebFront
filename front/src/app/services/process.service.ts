@@ -8,32 +8,42 @@ import { BackendProcessResponse } from '../models/BackendProcessResponse';
   providedIn: 'root'
 })
 export class ProcessService {
-  private baseUrl = 'http://localhost:8080/api/process'; 
+  private baseUrl = 'http://localhost:8080/api/process';
 
   constructor(private http: HttpClient) { }
 
-  
-  createProcess(Process: Process): Observable<Process> {
-    return this.http.post<Process>(this.baseUrl, Process);
+
+  createProcess(process: Process): Observable<Process> {
+    return this.http.post<Process>(this.baseUrl, process);
   }
 
-  getProcesses(): Observable<Process[]> {
-    return this.http.get<Process[]>(this.baseUrl);
+  getProcesses(): Observable<BackendProcessResponse[]> {
+    return this.http.get<BackendProcessResponse[]>(this.baseUrl);
   }
 
-  getProcessById(id: number): Observable<Process> {
-    return this.http.get<Process>(`${this.baseUrl}/${id}`);
+  getProcessById(id: number): Observable<BackendProcessResponse> {
+    return this.http.get<BackendProcessResponse>(`${this.baseUrl}/${id}`);
   }
 
-  updateProcess(id: number, Process: Process): Observable<Process> {
-    return this.http.put<Process>(this.baseUrl, Process);
+  updateProcess(id: number, process: Process): Observable<Process> {
+    return this.http.put<Process>(this.baseUrl, process);
   }
 
   deleteProcess(id: number): Observable<any> {
     return this.http.delete(`${this.baseUrl}/${id}`);
   }
 
-  getProcessesByCompanyId(id: number): Observable<BackendProcessResponse[]>{
-      return this.http.get<BackendProcessResponse[]>(`${this.baseUrl}/company/${id}`);
-    }
+  getProcessesByCompanyId(id: number): Observable<BackendProcessResponse[]> {
+    return this.http.get<BackendProcessResponse[]>(`${this.baseUrl}/company/${id}`);
+  }
+
+  createDefaultProcess(id: number): Observable<Process> {
+    const process = new Process (
+      'Proceso inicial',
+      'Proceso creado automaticamente al registrarse',
+      id
+    );
+    return this.http.post<Process>(this.baseUrl, process);
+  }
+
 }
