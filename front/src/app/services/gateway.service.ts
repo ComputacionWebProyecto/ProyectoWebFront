@@ -7,7 +7,7 @@ import { Gateway } from '../models/Gateway';
   providedIn: 'root'
 })
 export class GatewayService {
-  private baseUrl = 'http://localhost:8080/api/gateway'; // ✅ Cambiar de 'gateways' a 'gateway'
+  private baseUrl = 'http://localhost:8080/api/gateway'; //Cambiar de 'gateways' a 'gateway'
 
   constructor(private http: HttpClient) {}
 
