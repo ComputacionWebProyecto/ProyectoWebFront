@@ -1,5 +1,5 @@
-// dashboard.ts — merge: proceso activo (ellos) + Activity/Edge (nosotros) + Gateways backend
-import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+// dashboard.ts
+import { ChangeDetectorRef, Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 import { DropdownMenuComponent } from './drop-menu/drop-menu';
@@ -59,7 +59,7 @@ interface BoardComponent {
   styleUrls: ['./dashboard.css'],
 })
 export class Dashboard implements OnInit, OnDestroy {
-  // UI
+  // ===== UI =====
   isSidebarOpen = true;
   isProcessPanelOpen = false;
   isUserPanelOpen = false;
@@ -82,13 +82,79 @@ export class Dashboard implements OnInit, OnDestroy {
   private activitiesCache: Activity[] = [];
   private edgesCache: Edge[] = [];
 
-  // Seguimiento de ids ya vistos para detectar “nuevo creado”
+  // Seguimiento de ids ya vistos
   private seenActivityIds = new Set<number>();
   private seenEdgeIds = new Set<number>();
 
   // Proceso activo (ellos)
   currentProcessId: number | null = null;
   private processSubscription?: Subscription;
+
+  // ===== Pan del canvas =====
+  isPanning = false;
+  panOffsetX = 0;
+  panOffsetY = 0;
+  startPanX = 0;
+  startPanY = 0;
+  lastMouseX = 0;
+  lastMouseY = 0;
+  isShiftPressed = false;
+
+  @HostListener('mousedown', ['$event'])
+  onMouseDown(event: MouseEvent) {
+    const target = event.target as HTMLElement;
+    if (event.button === 1 || (event.button === 0 && event.shiftKey)) {
+      if (
+        !target.closest('.board-component') &&
+        !target.closest('aside') &&
+        !target.closest('header') &&
+        target.closest('.board-area')
+      ) {
+        event.preventDefault();
+        this.isPanning = true;
+        this.startPanX = this.panOffsetX;
+        this.startPanY = this.panOffsetY;
+        this.lastMouseX = event.clientX;
+        this.lastMouseY = event.clientY;
+        document.body.style.cursor = 'grabbing';
+      }
+    }
+  }
+
+  @HostListener('document:mousemove', ['$event'])
+  onMouseMove(event: MouseEvent) {
+    if (this.isPanning) {
+      event.preventDefault();
+      const dx = event.clientX - this.lastMouseX;
+      const dy = event.clientY - this.lastMouseY;
+      this.panOffsetX = this.startPanX + dx;
+      this.panOffsetY = this.startPanY + dy;
+      this.cdr.detectChanges();
+    }
+  }
+
+  @HostListener('document:mouseup')
+  onMouseUp() {
+    if (this.isPanning) {
+      this.isPanning = false;
+      document.body.style.cursor = 'default';
+    }
+  }
+
+  getCanvasTransform(): string {
+    return `translate(${this.panOffsetX}px, ${this.panOffsetY}px)`;
+  }
+
+  @HostListener('document:keydown.shift')
+  onShiftDown() {
+    this.isShiftPressed = true;
+    document.querySelector('.board-area')?.classList.add('shift-active');
+  }
+  @HostListener('document:keyup.shift')
+  onShiftUp() {
+    this.isShiftPressed = false;
+    document.querySelector('.board-area')?.classList.remove('shift-active');
+  }
 
   constructor(
     private gatewayService: GatewayService,
@@ -98,7 +164,7 @@ export class Dashboard implements OnInit, OnDestroy {
     private cdr: ChangeDetectorRef
   ) {}
 
-  // Etiquetas legibles para la UI
+  // Etiquetas legibles
   getComponentLabel(type: string): string {
     const labels: Record<string, string> = {
       'decision-gateway': 'Decisión',
@@ -112,21 +178,21 @@ export class Dashboard implements OnInit, OnDestroy {
 
   // ===== Ciclo de vida =====
   ngOnInit(): void {
-    // Restaurar proceso activo y suscribirse (ellos)
+    // Proceso activo
     this.activeProcessService.restoreActiveProcess();
     this.processSubscription = this.activeProcessService.activeProcessId$.subscribe((pid) => {
       this.currentProcessId = pid ?? null;
       if (this.currentProcessId) {
-        this.loadGateways(); // carga solo gateways del backend
+        this.loadGateways();
       } else {
-        // si no hay proceso, ocultamos gateways; mantenemos capas locales de activity/edge
+        // mantener solo nuestras capas locales
         const onlyNonGateways = this.boardComponents.filter((c) => c.category !== 'gateway');
         this.boardComponents = [...onlyNonGateways];
       }
       this.cdr.detectChanges();
     });
 
-    // Streams Activity/Edge (nuestro)
+    // Streams
     this.subscribeActivitiesStream();
     this.subscribeEdgesStream();
   }
@@ -135,7 +201,7 @@ export class Dashboard implements OnInit, OnDestroy {
     this.processSubscription?.unsubscribe();
   }
 
-  // ===== Paneles =====
+  // ===== Toggles paneles =====
   onToggleRoles(): void {
     this.isRolePanelOpen = !this.isRolePanelOpen;
     if (this.isUserPanelOpen || this.isProcessPanelOpen) {
@@ -165,29 +231,28 @@ export class Dashboard implements OnInit, OnDestroy {
   loadGateways(): void {
     this.gatewayService.getGateways().subscribe({
       next: (gateways: Gateway[]) => {
-        // limpiamos solo gateways previos para evitar duplicados y conservamos capas locales
         const nonGateways = this.boardComponents.filter((c) => c.category !== 'gateway');
         const gwComps: BoardComponent[] = [];
 
-        gateways.forEach((gateway: Gateway) => {
-          if (gateway.status === 'active' && gateway.id) {
+        gateways.forEach((g) => {
+          if (g.status === 'active' && g.id) {
             gwComps.push({
-              id: `gateway-${gateway.id}`,
-              type: gateway.type,
+              id: `gateway-${g.id}`,
+              type: g.type,
               category: 'gateway',
-              x: gateway.x ?? 100,
-              y: gateway.y ?? 100,
-              label: this.getComponentLabel(gateway.type),
-              gatewayId: gateway.id,
+              x: g.x ?? 100,
+              y: g.y ?? 100,
+              label: this.getComponentLabel(g.type),
+              gatewayId: g.id,
             });
           }
         });
 
         this.boardComponents = [...gwComps, ...nonGateways];
-        this.recomputeBoardIncludeCurrentGateways(); // mezcla final con capas
+        this.recomputeBoardIncludeCurrentGateways();
         this.cdr.detectChanges();
       },
-      error: (error) => console.error('Error al cargar gateways:', error),
+      error: (e) => console.error('Error al cargar gateways:', e),
     });
   }
 
@@ -202,7 +267,7 @@ export class Dashboard implements OnInit, OnDestroy {
     };
     this.gatewayService.updateGateway(component.gatewayId, gateway).subscribe({
       next: () => console.log('Posición actualizada en backend'),
-      error: (error) => console.error('Error al actualizar posición:', error),
+      error: (e) => console.error('Error al actualizar posición:', e),
     });
   }
 
@@ -215,8 +280,8 @@ export class Dashboard implements OnInit, OnDestroy {
       // mover existente
       const boardElement = event.currentTarget as HTMLElement;
       const rect = boardElement.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      const y = event.clientY - rect.top;
+      const x = event.clientX - rect.left - this.panOffsetX;
+      const y = event.clientY - rect.top - this.panOffsetY;
 
       const component = this.boardComponents.find((c) => c.id === componentId);
       if (component) {
@@ -243,15 +308,10 @@ export class Dashboard implements OnInit, OnDestroy {
       if (componentType && componentCategory) {
         const boardElement = event.currentTarget as HTMLElement;
         const rect = boardElement.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top;
+        const x = event.clientX - rect.left - this.panOffsetX;
+        const y = event.clientY - rect.top - this.panOffsetY;
 
         this.addComponentToBoard(componentType, componentCategory, x, y);
-
-        // abrir inspector al crear Activity/Edge
-        if (componentCategory === 'activity' || componentCategory === 'edge') {
-          this.openInspector(componentCategory as 'activity' | 'edge');
-        }
       }
     }
 
@@ -292,8 +352,15 @@ export class Dashboard implements OnInit, OnDestroy {
     this.isDraggingExisting = false;
   }
 
-  // ===== Alta componentes =====
+  // ===== Altas de componentes =====
   addComponentToBoard(type: string, category: string, x: number, y: number): void {
+    // IMPORTANTE: solo gateways y activities crean un componente visual inmediato.
+    // Edges se crean desde el panel; aquí solo abrimos el inspector sin agregar nada al tablero.
+    if (category === 'edge') {
+      this.openInspector('edge');
+      return;
+    }
+
     const tempId = `temp-${Date.now()}-${Math.random()}`;
     const newComponent: BoardComponent = {
       id: tempId,
@@ -325,13 +392,11 @@ export class Dashboard implements OnInit, OnDestroy {
         },
         error: (err) => {
           console.error('ERROR AL GUARDAR EN BACKEND', err);
-          // permanece visible localmente
         },
       });
       return;
     }
 
-    // Activity / Edge se crean en memoria via servicios
     if (category === 'activity') {
       const a: Activity = {
         name: 'Activity',
@@ -349,23 +414,18 @@ export class Dashboard implements OnInit, OnDestroy {
       else console.warn('[Dashboard] ActivityService no expone create/add/new');
       return;
     }
-
-    if (category === 'edge') {
-      const e: Edge = { label: 'Edge', status: 'active' };
-      const svc: any = this.edgeService as any;
-      if (typeof svc.create === 'function') svc.create(e);
-      else if (typeof svc.add === 'function') svc.add(e);
-      else if (typeof svc.new === 'function') svc.new(e);
-      else console.warn('[Dashboard] EdgeService no expone create/add/new');
-      return;
-    }
   }
 
-  // ===== Menú lateral =====
+  // ===== Menú lateral (click) =====
   onComponentSelected(data: { type: string; category: string }): void {
+    // Si eligen "edge" desde el menú: NO crear nada visual; solo abrir panel.
+    if (data.category === 'edge') {
+      this.openInspector('edge');
+      return;
+    }
     this.addComponentToBoard(data.type, data.category, 400, 300);
-    if (data.category === 'activity' || data.category === 'edge') {
-      this.openInspector(data.category as 'activity' | 'edge');
+    if (data.category === 'activity') {
+      this.openInspector('activity');
     }
   }
 
@@ -411,7 +471,6 @@ export class Dashboard implements OnInit, OnDestroy {
       if (kind === 'edge') this.selectedEdgeId = component.edgeId ?? null;
     }
   }
-
   closeInspector(): void {
     this.inspectorOpen = false;
     this.inspectorKind = null;
@@ -420,45 +479,24 @@ export class Dashboard implements OnInit, OnDestroy {
   }
 
   // ===== Líneas SVG (edges conectados) =====
-  edgeCoordsByComponent(edgeCmp: BoardComponent):
-    | { x1: number; y1: number; x2: number; y2: number }
-    | null {
-    if (edgeCmp.category !== 'edge') return null;
-    const fromId = edgeCmp.fromId;
-    const toId = edgeCmp.toId;
-    if (fromId == null || toId == null) return null;
-
-    const from = this.boardComponents.find(
-      (c) => c.category === 'activity' && (c as any).activityId === fromId
-    );
-    const to = this.boardComponents.find(
-      (c) => c.category === 'activity' && (c as any).activityId === toId
-    );
+  edgeCoordsByComponent(edgeCmp: BoardComponent): { x1: number; y1: number; x2: number; y2: number } | null {
+    if (edgeCmp.category !== 'edge' || edgeCmp.fromId == null || edgeCmp.toId == null) return null;
+    const from = this.boardComponents.find(c => c.category === 'activity' && (c as any).activityId === edgeCmp.fromId);
+    const to   = this.boardComponents.find(c => c.category === 'activity' && (c as any).activityId === edgeCmp.toId);
     if (!from || !to) return null;
-
-    const fromW = from.width ?? 100,
-      fromH = from.height ?? 60;
-    const toW = to.width ?? 100,
-      toH = to.height ?? 60;
-
-    return {
-      x1: from.x + fromW / 2,
-      y1: from.y + fromH / 2,
-      x2: to.x + toW / 2,
-      y2: to.y + toH / 2,
-    };
+    const fromW = from.width ?? 100, fromH = from.height ?? 60;
+    const toW   = to.width ?? 100,   toH   = to.height ?? 60;
+    return { x1: from.x + fromW/2, y1: from.y + fromH/2, x2: to.x + toW/2, y2: to.y + toH/2 };
   }
 
-  // ===== Streams tolerantes =====
+  // ===== Streams =====
   private subscribeActivitiesStream(): void {
     const svc: any = this.activityService as any;
 
     const stream =
       svc.items$ ??
       svc.list$ ??
-      (svc.items && typeof svc.items.asObservable === 'function'
-        ? svc.items.asObservable()
-        : undefined) ??
+      (svc.items && typeof svc.items.asObservable === 'function' ? svc.items.asObservable() : undefined) ??
       (typeof svc.list === 'function' ? svc.list() : undefined) ??
       (typeof svc.getAll === 'function' ? svc.getAll() : undefined) ??
       (typeof svc.getActivities === 'function' ? svc.getActivities() : undefined);
@@ -478,7 +516,6 @@ export class Dashboard implements OnInit, OnDestroy {
           activityId: a.id,
         }));
 
-        // nuevo id -> selecciona si inspector abierto
         const ids = this.activitiesCache.map((a) => a.id).filter((id): id is number => id != null);
         const newId = ids.find((id) => !this.seenActivityIds.has(id));
         this.seenActivityIds = new Set(ids);
@@ -489,9 +526,7 @@ export class Dashboard implements OnInit, OnDestroy {
         this.recomputeBoardIncludeCurrentGateways();
       });
     } else {
-      console.warn(
-        '[Dashboard] No encontré stream de Activities. ¿items$ / list() / getAll() / getActivities()?'
-      );
+      console.warn('[Dashboard] No encontré stream de Activities. ¿items$ / list() / getAll() / getActivities()?');
     }
   }
 
@@ -501,9 +536,7 @@ export class Dashboard implements OnInit, OnDestroy {
     const stream =
       svc.items$ ??
       svc.list$ ??
-      (svc.items && typeof svc.items.asObservable === 'function'
-        ? svc.items.asObservable()
-        : undefined) ??
+      (svc.items && typeof svc.items.asObservable === 'function' ? svc.items.asObservable() : undefined) ??
       (typeof svc.list === 'function' ? svc.list() : undefined) ??
       (typeof svc.getAll === 'function' ? svc.getAll() : undefined) ??
       (typeof svc.getEdges === 'function' ? svc.getEdges() : undefined);
@@ -511,17 +544,17 @@ export class Dashboard implements OnInit, OnDestroy {
     if (stream && typeof stream.subscribe === 'function') {
       stream.subscribe((eds: Edge[] = []) => {
         this.edgesCache = eds ?? [];
+
+        // Importante: NO dibujar “pelotica verde”.
+        // Mantenemos una entrada por edge SOLO para que el SVG trace la línea.
         this.edgesLayer = this.edgesCache.map((e) => {
-          // compat: preferir activitySourceId/activityDestinyId y caer a fromId/toId
           const src = (e as any).activitySourceId ?? e.fromId;
           const dst = (e as any).activityDestinyId ?? e.toId;
           return {
             id: `edge-${e.id ?? `local-${this.hash()}`}`,
-            type: 'event-start',
+            type: 'edge-line',                 // <- NO coincide con 'event-start', así el HTML no dibuja el círculo
             category: 'edge',
-            x: 24,
-            y: 24,
-            label: e.label ?? 'Edge',
+            x: 0, y: 0,                        // sin importancia; no hay contenido visual
             edgeId: e.id,
             fromId: src,
             toId: dst,
