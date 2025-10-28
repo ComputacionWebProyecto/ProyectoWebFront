@@ -31,9 +31,10 @@ export class ProcessPanel implements OnInit {
       console.log("datos usuario: ", user);
       const companyId = user?.company?.id;
       if (typeof companyId === 'number') {
-        this.processService.getProcessesByCompanyId(companyId).subscribe({
+        this.processService.getProcessesSummaryByCompanyId(companyId).subscribe({
           next: (data: BackendProcessResponse[]) => {
             this.processes = [...data];
+            console.log("Procesos recibidos del backend:", data);
             this.cdr.detectChanges();
           },
           error: (err) => console.log("Error loading users: ", err)

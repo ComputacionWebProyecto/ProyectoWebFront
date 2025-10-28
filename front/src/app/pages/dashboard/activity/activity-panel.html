@@ -3,6 +3,7 @@
   <div class="flex items-center justify-between mb-4">
     <h2 id="activity-title" class="panel-title">
       {{ editingId() ? 'Editar actividad' : 'Nueva actividad' }}
+      <small *ngIf="editingId()" class="ml-2 text-slate-500">#{{ editingId() }}</small>
     </h2>
 
     <!-- Botón cerrar (emite close) -->

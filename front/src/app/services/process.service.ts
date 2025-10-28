@@ -37,6 +37,10 @@ export class ProcessService {
     return this.http.get<BackendProcessResponse[]>(`${this.baseUrl}/company/${id}`);
   }
 
+  getProcessesSummaryByCompanyId(id: number): Observable<BackendProcessResponse[]> {
+  return this.http.get<BackendProcessResponse[]>(`${this.baseUrl}/company/${id}/summary`);
+  }
+
   createDefaultProcess(id: number): Observable<Process> {
     const process = new Process (
       'Proceso inicial',
