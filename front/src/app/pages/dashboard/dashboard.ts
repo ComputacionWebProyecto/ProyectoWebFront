@@ -1,5 +1,5 @@
 // dashboard.ts — Merge: prioriza proceso activo/gateways (ellos) + activities/edges/inspector (nosotros)
-import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DropdownMenuComponent } from "./drop-menu/drop-menu";
 import { HeaderDashboard } from './header-dashboard/header-dashboard';
@@ -92,13 +92,86 @@ export class Dashboard implements OnInit, OnDestroy {
   private processSubscription?: Subscription;
   currentProcessId: number | null = null;
 
+  // Mover el tablero
+  isPanning = false;
+  panOffsetX = 0;
+  panOffsetY = 0;
+  startPanX = 0;
+  startPanY = 0;
+  lastMouseX = 0;
+  lastMouseY = 0;
+  isShiftPressed = false;
+
+  // ======== Listeners para Pan ========
+  @HostListener('mousedown', ['$event'])
+  onMouseDown(event: MouseEvent) {
+    // Solo iniciar pan si es click con botón medio o espacio + click izquierdo
+    // Y no estamos sobre un componente arrastrable
+    const target = event.target as HTMLElement;
+
+    if (event.button === 1 || (event.button === 0 && event.shiftKey)) {
+      // Verificar que no estamos clickeando un componente
+      if (!target.closest('.board-component') &&
+        !target.closest('aside') &&
+        !target.closest('header') &&
+        target.closest('.board-area')) {
+        event.preventDefault();
+        this.isPanning = true;
+        this.startPanX = this.panOffsetX;
+        this.startPanY = this.panOffsetY;
+        this.lastMouseX = event.clientX;
+        this.lastMouseY = event.clientY;
+        document.body.style.cursor = 'grabbing';
+      }
+    }
+  }
+
+  @HostListener('document:mousemove', ['$event'])
+  onMouseMove(event: MouseEvent) {
+    if (this.isPanning) {
+      event.preventDefault();
+      const deltaX = event.clientX - this.lastMouseX;
+      const deltaY = event.clientY - this.lastMouseY;
+
+      this.panOffsetX = this.startPanX + deltaX;
+      this.panOffsetY = this.startPanY + deltaY;
+
+      this.cdr.detectChanges();
+    }
+  }
+
+  @HostListener('document:mouseup', ['$event'])
+  onMouseUp(event: MouseEvent) {
+    if (this.isPanning) {
+      this.isPanning = false;
+      document.body.style.cursor = 'default';
+    }
+  }
+
+  // Método helper para obtener el estilo transform del canvas
+  getCanvasTransform(): string {
+    return `translate(${this.panOffsetX}px, ${this.panOffsetY}px)`;
+  }
+
+  @HostListener('document:keydown.shift')
+  onShiftDown() {
+    this.isShiftPressed = true;
+    document.querySelector('.board-area')?.classList.add('shift-available');
+  }
+
+  @HostListener('document:keyup.shift')
+  onShiftUp() {
+    this.isShiftPressed = false;
+    document.querySelector('.board-area')?.classList.remove('shift-available');
+  }
+
   constructor(
     private gatewayService: GatewayService,
     private activityService: ActivityService,
     private edgeService: EdgeService,
     private activeProcessService: ActiveProcessService,
     private cdr: ChangeDetectorRef
-  ) {}
+  ) { }
 
   // Mapa de etiquetas legibles para la UI
   getComponentLabel(type: string): string {
@@ -238,8 +311,8 @@ export class Dashboard implements OnInit, OnDestroy {
       // MOVER existente
       const boardElement = event.currentTarget as HTMLElement;
       const rect = boardElement.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      const y = event.clientY - rect.top;
+      const x = event.clientX - rect.left - this.panOffsetX;
+      const y = event.clientY - rect.top - this.panOffsetY;
 
       const component = this.boardComponents.find(c => c.id === componentId);
       if (component) {
@@ -273,8 +346,8 @@ export class Dashboard implements OnInit, OnDestroy {
       if (componentType && componentCategory) {
         const boardElement = event.currentTarget as HTMLElement;
         const rect = boardElement.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top;
+        const x = event.clientX - rect.left - this.panOffsetX;
+        const y = event.clientY - rect.top - this.panOffsetY;
 
         this.addComponentToBoard(componentType, componentCategory, x, y);
 
@@ -382,9 +455,9 @@ export class Dashboard implements OnInit, OnDestroy {
         status: 'active'
       };
       const svc: any = this.activityService as any;
-      if (typeof svc.create === 'function')      svc.create(a);
-      else if (typeof svc.add === 'function')    svc.add(a);
-      else if (typeof svc.new === 'function')    svc.new(a);
+      if (typeof svc.create === 'function') svc.create(a);
+      else if (typeof svc.add === 'function') svc.add(a);
+      else if (typeof svc.new === 'function') svc.new(a);
       else console.warn('[Dashboard] ActivityService no expone create/add/new');
       return;
     }
@@ -392,9 +465,9 @@ export class Dashboard implements OnInit, OnDestroy {
     if (category === 'edge') {
       const e: Edge = { label: 'Edge', status: 'active' };
       const svc: any = this.edgeService as any;
-      if (typeof svc.create === 'function')      svc.create(e);
-      else if (typeof svc.add === 'function')    svc.add(e);
-      else if (typeof svc.new === 'function')    svc.new(e);
+      if (typeof svc.create === 'function') svc.create(e);
+      else if (typeof svc.add === 'function') svc.add(e);
+      else if (typeof svc.new === 'function') svc.new(e);
       else console.warn('[Dashboard] EdgeService no expone create/add/new');
       return;
     }
@@ -435,12 +508,12 @@ export class Dashboard implements OnInit, OnDestroy {
     // (nosotros) reflejar eliminación en servicios in-memory si tenemos IDs
     if (component?.category === 'activity' && component.activityId != null) {
       const svc: any = this.activityService as any;
-      if (typeof svc.delete === 'function')      svc.delete(component.activityId);
+      if (typeof svc.delete === 'function') svc.delete(component.activityId);
       else if (typeof svc.remove === 'function') svc.remove(component.activityId);
       else console.warn('[Dashboard] ActivityService no expone delete/remove');
     } else if (component?.category === 'edge' && component.edgeId != null) {
       const svc: any = this.edgeService as any;
-      if (typeof svc.delete === 'function')      svc.delete(component.edgeId);
+      if (typeof svc.delete === 'function') svc.delete(component.edgeId);
       else if (typeof svc.remove === 'function') svc.remove(component.edgeId);
       else console.warn('[Dashboard] EdgeService no expone delete/remove');
     }
@@ -457,7 +530,7 @@ export class Dashboard implements OnInit, OnDestroy {
     // Si pasamos el componente (lo hacemos al hacer click), fija la selección
     if (component) {
       if (kind === 'activity') this.selectedActivityId = component.activityId ?? null;
-      if (kind === 'edge')     this.selectedEdgeId = component.edgeId ?? null;
+      if (kind === 'edge') this.selectedEdgeId = component.edgeId ?? null;
     }
   }
 
@@ -472,11 +545,11 @@ export class Dashboard implements OnInit, OnDestroy {
   edgeCoordsByComponent(edgeCmp: BoardComponent): { x1: number; y1: number; x2: number; y2: number } | null {
     if (edgeCmp.category !== 'edge' || edgeCmp.fromId == null || edgeCmp.toId == null) return null;
     const from = this.boardComponents.find(c => c.category === 'activity' && (c as any).activityId === edgeCmp.fromId);
-    const to   = this.boardComponents.find(c => c.category === 'activity' && (c as any).activityId === edgeCmp.toId);
+    const to = this.boardComponents.find(c => c.category === 'activity' && (c as any).activityId === edgeCmp.toId);
     if (!from || !to) return null;
     const fromW = from.width ?? 100, fromH = from.height ?? 60;
-    const toW   = to.width ?? 100,   toH   = to.height ?? 60;
-    return { x1: from.x + fromW/2, y1: from.y + fromH/2, x2: to.x + toW/2, y2: to.y + toH/2 };
+    const toW = to.width ?? 100, toH = to.height ?? 60;
+    return { x1: from.x + fromW / 2, y1: from.y + fromH / 2, x2: to.x + toW / 2, y2: to.y + toH / 2 };
   }
 
   // ======== Streams tolerantes: Activities ========
@@ -582,10 +655,10 @@ export class Dashboard implements OnInit, OnDestroy {
     };
 
     const svc: any = this.activityService as any;
-    if (typeof svc.update === 'function')      svc.update(updated);
-    else if (typeof svc.save === 'function')   svc.save(updated);
-    else if (typeof svc.put === 'function')    svc.put(updated);
-    else if (typeof svc.set === 'function')    svc.set(updated);
+    if (typeof svc.update === 'function') svc.update(updated);
+    else if (typeof svc.save === 'function') svc.save(updated);
+    else if (typeof svc.put === 'function') svc.put(updated);
+    else if (typeof svc.set === 'function') svc.set(updated);
     else console.warn('[Dashboard] ActivityService no expone update/save/put/set');
   }
 

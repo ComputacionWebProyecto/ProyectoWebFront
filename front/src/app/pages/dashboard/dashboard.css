@@ -5,6 +5,8 @@
   background-color: #f5f5f7;
   background-image: radial-gradient(circle, rgba(0, 0, 0, 0.12) 1.5px, transparent 1.5px);
   background-size: 20px 20px;
+  overflow: hidden;
+  position: relative;
 }
 
 /* Área del tablero para drag & drop - SIN fondo adicional */
@@ -13,7 +15,27 @@
   width: 100%;
   height: 100%;
   min-height: calc(100vh - 64px);
+  overflow: hidden;
+  cursor: default;
   /* NO hay background aquí, solo hereda del dashboard-container */
+}
+
+/* Cursor grab solo cuando shift está presionado */
+.board-area.shift-active {
+  cursor: grab;
+}
+
+.board-area.shift-active:active {
+  cursor: grabbing;
+}
+
+/* Canvas interno que se puede mover con transform */
+.board-canvas {
+  position: relative;
+  width: 5000px;
+  height: 5000px;
+  transition: transform 0.05s ease-out;
+  will-change: transform;
 }
 
 /* Componente en el tablero */
@@ -53,12 +75,13 @@
   flex-direction: column;
   align-items: center;
   pointer-events: none;
-  background: transparent; /* Asegura que sea transparente */
+  background: transparent;
+  /* Asegura que sea transparente */
 }
 
-.gateway-container > *,
-.activity-container > *,
-.event-container > * {
+.gateway-container>*,
+.activity-container>*,
+.event-container>* {
   pointer-events: auto;
 }
 
@@ -66,7 +89,8 @@
 .gateway {
   width: 80px;
   height: 80px;
-  border: 3px solid #3b82f6; /* azul */
+  border: 3px solid #3b82f6;
+  /* azul */
   background-color: #e0f2fe;
   border-radius: 50%;
   display: flex;
@@ -155,7 +179,8 @@
   bottom: -25px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(255, 255, 255, 0.95); /* Semi-transparente para ver los puntos */
+  background: rgba(255, 255, 255, 0.95);
+  /* Semi-transparente para ver los puntos */
   padding: 4px 12px;
   border-radius: 6px;
   font-size: 11px;
@@ -166,7 +191,8 @@
   border: 1px solid #E5E7EB;
   pointer-events: none;
   z-index: 5;
-  backdrop-filter: blur(4px); /* Efecto de difuminado */
+  backdrop-filter: blur(4px);
+  /* Efecto de difuminado */
 }
 
 /* Botón de eliminar */
@@ -212,6 +238,7 @@
     opacity: 0;
     transform: scale(0.5);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
@@ -220,6 +247,29 @@
 
 .board-component {
   animation: componentAppear 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Indicador visual de que se puede hacer pan */
+.board-area::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 16px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  border-radius: 8px;
+  font-size: 12px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 1000;
+}
+
+.board-area:hover::before {
+  content: 'Shift + Click para mover el canvas';
+  opacity: 1;
 }
 
 /* Responsive */
@@ -241,6 +291,10 @@
     width: 20px;
     height: 20px;
     font-size: 16px;
+  }
+
+  .board-area::before {
+    content: 'Toca y arrastra para mover';
   }
 }
 
