@@ -1,4 +1,6 @@
-// dashboard.ts
+// dashboard.ts — Merge final (pan + procesos/gateways backend + activities/edges + sin “pelotica” de edge)
+// Fuentes usadas: :contentReference[oaicite:0]{index=0}  :contentReference[oaicite:1]{index=1}
+
 import { ChangeDetectorRef, Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
@@ -36,8 +38,8 @@ interface BoardComponent {
   edgeId?: number;
 
   // Para trazar edges y centrar activities
-  fromId?: number; // activity source (fallback a activitySourceId)
-  toId?: number;   // activity destiny (fallback a activityDestinyId)
+  fromId?: number; // activity source (o activitySourceId)
+  toId?: number;   // activity destiny (o activityDestinyId)
   width?: number;
   height?: number;
 }
@@ -185,7 +187,7 @@ export class Dashboard implements OnInit, OnDestroy {
       if (this.currentProcessId) {
         this.loadGateways();
       } else {
-        // mantener solo nuestras capas locales
+        // si no hay proceso, ocultamos gateways; mantenemos capas locales de activity/edge
         const onlyNonGateways = this.boardComponents.filter((c) => c.category !== 'gateway');
         this.boardComponents = [...onlyNonGateways];
       }
@@ -231,6 +233,7 @@ export class Dashboard implements OnInit, OnDestroy {
   loadGateways(): void {
     this.gatewayService.getGateways().subscribe({
       next: (gateways: Gateway[]) => {
+        // limpiamos solo gateways previos para evitar duplicados y conservamos capas locales
         const nonGateways = this.boardComponents.filter((c) => c.category !== 'gateway');
         const gwComps: BoardComponent[] = [];
 
@@ -312,6 +315,11 @@ export class Dashboard implements OnInit, OnDestroy {
         const y = event.clientY - rect.top - this.panOffsetY;
 
         this.addComponentToBoard(componentType, componentCategory, x, y);
+
+        // abrir inspector al crear Activity por DnD
+        if (componentCategory === 'activity') {
+          this.openInspector('activity');
+        }
       }
     }
 
@@ -354,8 +362,8 @@ export class Dashboard implements OnInit, OnDestroy {
 
   // ===== Altas de componentes =====
   addComponentToBoard(type: string, category: string, x: number, y: number): void {
-    // IMPORTANTE: solo gateways y activities crean un componente visual inmediato.
-    // Edges se crean desde el panel; aquí solo abrimos el inspector sin agregar nada al tablero.
+    // IMPORTANTE: los Edges NO crean nodo visual (evita “pelotica”).
+    // Se crean/editarán solo desde el panel.
     if (category === 'edge') {
       this.openInspector('edge');
       return;
@@ -424,9 +432,7 @@ export class Dashboard implements OnInit, OnDestroy {
       return;
     }
     this.addComponentToBoard(data.type, data.category, 400, 300);
-    if (data.category === 'activity') {
-      this.openInspector('activity');
-    }
+    if (data.category === 'activity') this.openInspector('activity');
   }
 
   // ===== Eliminar =====
@@ -481,12 +487,18 @@ export class Dashboard implements OnInit, OnDestroy {
   // ===== Líneas SVG (edges conectados) =====
   edgeCoordsByComponent(edgeCmp: BoardComponent): { x1: number; y1: number; x2: number; y2: number } | null {
     if (edgeCmp.category !== 'edge' || edgeCmp.fromId == null || edgeCmp.toId == null) return null;
-    const from = this.boardComponents.find(c => c.category === 'activity' && (c as any).activityId === edgeCmp.fromId);
-    const to   = this.boardComponents.find(c => c.category === 'activity' && (c as any).activityId === edgeCmp.toId);
+    const from = this.boardComponents.find(
+      (c) => c.category === 'activity' && (c as any).activityId === edgeCmp.fromId
+    );
+    const to = this.boardComponents.find(
+      (c) => c.category === 'activity' && (c as any).activityId === edgeCmp.toId
+    );
     if (!from || !to) return null;
-    const fromW = from.width ?? 100, fromH = from.height ?? 60;
-    const toW   = to.width ?? 100,   toH   = to.height ?? 60;
-    return { x1: from.x + fromW/2, y1: from.y + fromH/2, x2: to.x + toW/2, y2: to.y + toH/2 };
+    const fromW = from.width ?? 100,
+      fromH = from.height ?? 60;
+    const toW = to.width ?? 100,
+      toH = to.height ?? 60;
+    return { x1: from.x + fromW / 2, y1: from.y + fromH / 2, x2: to.x + toW / 2, y2: to.y + toH / 2 };
   }
 
   // ===== Streams =====
@@ -545,16 +557,17 @@ export class Dashboard implements OnInit, OnDestroy {
       stream.subscribe((eds: Edge[] = []) => {
         this.edgesCache = eds ?? [];
 
-        // Importante: NO dibujar “pelotica verde”.
-        // Mantenemos una entrada por edge SOLO para que el SVG trace la línea.
+        // NO dibujar “pelotica verde”: solo una entrada para que el SVG trace la línea.
         this.edgesLayer = this.edgesCache.map((e) => {
           const src = (e as any).activitySourceId ?? e.fromId;
           const dst = (e as any).activityDestinyId ?? e.toId;
           return {
             id: `edge-${e.id ?? `local-${this.hash()}`}`,
-            type: 'edge-line',                 // <- NO coincide con 'event-start', así el HTML no dibuja el círculo
+            type: 'edge-line', // distinto a 'event-start' para que el HTML no dibuje círculo
             category: 'edge',
-            x: 0, y: 0,                        // sin importancia; no hay contenido visual
+            x: 0,
+            y: 0,
+            label: e.label ?? 'Edge',
             edgeId: e.id,
             fromId: src,
             toId: dst,
@@ -600,6 +613,7 @@ export class Dashboard implements OnInit, OnDestroy {
   private recomputeBoardIncludeCurrentGateways(): void {
     const gateways = this.boardComponents.filter((c) => c.category === 'gateway');
     this.boardComponents = [...gateways, ...this.activitiesLayer, ...this.edgesLayer];
+    this.cdr.detectChanges();
   }
 
   private recomputeBoardAfterLocalMove(component: BoardComponent): void {
