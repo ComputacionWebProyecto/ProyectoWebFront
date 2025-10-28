@@ -1,17 +1,16 @@
 <section class="panel" aria-labelledby="edge-title">
   <!-- Título + botón cerrar -->
   <div class="flex items-center justify-between mb-4">
-    <h2 id="edge-title" class="panel-title">Edges</h2>
+    <h2 id="edge-title" class="panel-title">
+      {{ editingId() ? 'Editar edge' : 'Nuevo edge' }}
+    </h2>
 
-    <!-- Botón cerrar (emite close) -->
     <button
       type="button"
       (click)="onClose()"
       aria-label="Cerrar panel"
-      class="rounded-md p-2
-             text-slate-500 hover:text-slate-900
-             dark:text-slate-300 dark:hover:text-white
-             hover:bg-slate-100 dark:hover:bg-slate-800">
+      class="panel-close"
+    >
       &times;
     </button>
   </div>
@@ -25,38 +24,57 @@
         type="number"
         formControlName="processId"
         placeholder="Ej: 10"
-        min="1" />
+        min="1"
+      />
+      <small class="error" *ngIf="form.get('processId')?.touched && form.get('processId')?.errors?.['min']">
+        Debe ser &ge; 1.
+      </small>
     </div>
 
     <div class="row">
-      <label for="activitySourceId">Desde (Activity ID)</label>
-      <input
+      <label for="activitySourceId">Desde (Actividad)</label>
+      <select
         id="activitySourceId"
-        type="number"
         formControlName="activitySourceId"
-        placeholder="Ej: 1"
-        min="1"
-        aria-required="true" />
-      <small class="error"
-             *ngIf="form.get('activitySourceId')?.touched && form.get('activitySourceId')?.errors as e">
+        aria-required="true"
+      >
+        <option [ngValue]="null" disabled>Selecciona actividad origen…</option>
+        <option
+          *ngFor="let a of activitiesSnapshot; trackBy: trackByAct"
+          [ngValue]="a.id"
+        >
+          #{{ a.id }} — {{ a.name || 'Sin nombre' }}
+        </option>
+      </select>
+      <small class="error" *ngIf="form.get('activitySourceId')?.touched && form.get('activitySourceId')?.errors as e">
         <ng-container *ngIf="e['required']">Requerido.</ng-container>
         <ng-container *ngIf="e['min']">Debe ser &ge; 1.</ng-container>
       </small>
     </div>
 
     <div class="row">
-      <label for="activityDestinyId">Hacia (Activity ID)</label>
-      <input
+      <label for="activityDestinyId">Hacia (Actividad)</label>
+      <select
         id="activityDestinyId"
-        type="number"
         formControlName="activityDestinyId"
-        placeholder="Ej: 2"
-        min="1"
-        aria-required="true" />
-      <small class="error"
-             *ngIf="form.get('activityDestinyId')?.touched && form.get('activityDestinyId')?.errors as e">
+        aria-required="true"
+      >
+        <option [ngValue]="null" disabled>Selecciona actividad destino…</option>
+        <option
+          *ngFor="let a of activitiesSnapshot; trackBy: trackByAct"
+          [ngValue]="a.id"
+        >
+          #{{ a.id }} — {{ a.name || 'Sin nombre' }}
+        </option>
+      </select>
+      <small class="error" *ngIf="form.get('activityDestinyId')?.touched && form.get('activityDestinyId')?.errors as e">
         <ng-container *ngIf="e['required']">Requerido.</ng-container>
         <ng-container *ngIf="e['min']">Debe ser &ge; 1.</ng-container>
+      </small>
+
+      <!-- Error cruzado: misma actividad -->
+      <small class="error" *ngIf="sameActivityError">
+        La actividad de origen y destino no puede ser la misma.
       </small>
     </div>
 
@@ -66,9 +84,9 @@
         id="label"
         formControlName="label"
         placeholder="Condición/Nombre del flujo"
-        aria-required="true" />
-      <small class="error"
-             *ngIf="form.get('label')?.touched && form.get('label')?.errors as e">
+        aria-required="true"
+      />
+      <small class="error" *ngIf="form.get('label')?.touched && form.get('label')?.errors as e">
         <ng-container *ngIf="e['required']">Requerido.</ng-container>
         <ng-container *ngIf="e['minlength']">Debe tener al menos 1 carácter.</ng-container>
       </small>

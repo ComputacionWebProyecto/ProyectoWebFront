@@ -12,11 +12,19 @@ import {
   signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import {
+  ReactiveFormsModule,
+  FormBuilder,
+  Validators,
+  AbstractControl,
+  ValidationErrors,
+} from '@angular/forms';
 import { Observable, Subscription } from 'rxjs';
 
 import { Edge } from '../../../models/Edge';
 import { EdgeService } from '../../../services/edge.service';
+import { Activity } from '../../../models/Activity';
+import { ActivityService } from '../../../services/activity.service';
 
 @Component({
   selector: 'app-edge-panel',
@@ -33,73 +41,113 @@ export class EdgePanel implements OnInit, OnChanges, OnDestroy {
   @Output() close = new EventEmitter<void>();
 
   private fb = inject(FormBuilder);
-  private service = inject(EdgeService);
+  private edgeService = inject(EdgeService);
+  private activityService = inject(ActivityService);
 
   /** Lista reactiva de edges (store en memoria / in-memory). */
   readonly edges$: Observable<Edge[]> =
-    (this.service as any).list$ ?? (this.service as any).items$;
+    (this.edgeService as any).list$ ?? (this.edgeService as any).items$;
+
+  /** Actividades para poblar los selects (tolerante a distintas APIs del servicio). */
+  readonly activities$: Observable<Activity[]> =
+    (this.activityService as any).list$ ??
+    (this.activityService as any).items$ ??
+    (this.activityService as any).getAll?.() ??
+    (this.activityService as any).list?.();
 
   /** Estado de edición y elemento seleccionado. */
   readonly editingId = signal<number | null>(null);
   readonly selected = signal<Edge | null>(null);
 
-  /** Snapshot para resolver el @Input edgeId cuando cambie. */
-  private snapshot: Edge[] = [];
-  private sub?: Subscription;
+  /** Snapshots para resolver @Input edgeId y renderizar selects. */
+  private edgeSnapshot: Edge[] = [];
+  private edgesSub?: Subscription;
+  private actsSub?: Subscription;
+  activitiesSnapshot: Activity[] = [];
 
   /**
    * Form:
    * - activitySourceId y activityDestinyId: requeridos (>=1)
    * - label: requerido (no vacío)
    * - processId: opcional (si lo usas puedes dejarlo vacío)
+   * + Validador cruzado: source != destiny
    */
-  readonly form = this.fb.group({
-    processId: this.fb.control<number | null>(null, {
-      // opcional; si lo rellenas validará que sea >= 1
-      validators: [Validators.min(1)],
-    }),
-    activitySourceId: this.fb.control<number | null>(null, {
-      validators: [Validators.required, Validators.min(1)],
-    }),
-    activityDestinyId: this.fb.control<number | null>(null, {
-      validators: [Validators.required, Validators.min(1)],
-    }),
-    label: this.fb.control<string>('', {
-      nonNullable: true,
-      validators: [Validators.required, Validators.minLength(1)],
-    }),
-  });
+  readonly form = this.fb.group(
+    {
+      processId: this.fb.control<number | null>(null, {
+        validators: [Validators.min(1)],
+      }),
+      activitySourceId: this.fb.control<number | null>(null, {
+        validators: [Validators.required, Validators.min(1)],
+      }),
+      activityDestinyId: this.fb.control<number | null>(null, {
+        validators: [Validators.required, Validators.min(1)],
+      }),
+      label: this.fb.control<string>('', {
+        nonNullable: true,
+        validators: [Validators.required, Validators.minLength(1)],
+      }),
+    },
+    { validators: [this.sourceDifferentFromDestValidator()] }
+  );
 
-  // Lifecycle
+  // ===== Lifecycle =====
   ngOnInit(): void {
     if (this.edges$) {
-      this.sub = this.edges$.subscribe((list) => {
-        this.snapshot = list ?? [];
+      this.edgesSub = this.edges$.subscribe((list) => {
+        this.edgeSnapshot = list ?? [];
         this.applyInputSelection();
       });
     } else {
       console.warn('[EdgePanel] No encontré stream de edges (list$ / items$).');
     }
-  }
 
-  ngOnChanges(changes: SimpleChanges): void {
-    if ('edgeId' in changes) {
-      this.applyInputSelection();
+    if (this.activities$) {
+      this.actsSub = this.activities$.subscribe((acts) => {
+        this.activitiesSnapshot = acts ?? [];
+      });
+    } else {
+      console.warn('[EdgePanel] No encontré stream de activities para selects.');
     }
   }
 
-  ngOnDestroy(): void {
-    this.sub?.unsubscribe();
+  ngOnChanges(changes: SimpleChanges): void {
+    if ('edgeId' in changes) this.applyInputSelection();
   }
+
+  ngOnDestroy(): void {
+    this.edgesSub?.unsubscribe();
+    this.actsSub?.unsubscribe();
+  }
+
+  // ===== Helpers =====
+  /** Validator cruzado para impedir source == destiny */
+  private sourceDifferentFromDestValidator() {
+    return (group: AbstractControl): ValidationErrors | null => {
+      const s = group.get('activitySourceId')?.value;
+      const d = group.get('activityDestinyId')?.value;
+      if (s != null && d != null && s === d) return { sameActivity: true };
+      return null;
+    };
+  }
+
+  /** Acceso conveniente al error de igualdad */
+  get sameActivityError(): boolean {
+    const e = this.form.errors as any;
+    return !!(e && e['sameActivity']);
+  }
+
+  /** Para *ngFor en selects/listas */
+  trackByAct = (_: number, a: Activity) => a.id ?? _;
+  trackById = (_: number, e: Edge) => e.id ?? _;
 
   /** Si hay edgeId desde el padre, cargarlo en edición. */
   private applyInputSelection(): void {
     if (this.edgeId == null) {
-      // volver a modo “crear” si no hay selección
       if (this.editingId() != null) this.reset();
       return;
     }
-    const found = this.snapshot.find((e) => e.id === this.edgeId);
+    const found = this.edgeSnapshot.find((e) => e.id === this.edgeId);
     if (found) this.edit(found);
   }
 
@@ -115,19 +163,18 @@ export class EdgePanel implements OnInit, OnChanges, OnDestroy {
     if (activitySourceId == null || activityDestinyId == null) return;
 
     const payload: Omit<Edge, 'id'> = {
-      // processId es opcional
-      processId: (processId ?? undefined) as any,
+      processId: (processId ?? undefined) as any, // opcional
       activitySourceId,
       activityDestinyId,
       label: label ?? '',
       status: 'active',
     };
 
-    const maybe$ = (this.service as any).create?.(payload);
+    const maybe$ = (this.edgeService as any).create?.(payload);
     if (maybe$?.subscribe) {
       maybe$.subscribe(() => this.reset());
     } else {
-      (this.service as any).create?.(payload);
+      (this.edgeService as any).create?.(payload);
       this.reset();
     }
   }
@@ -160,11 +207,11 @@ export class EdgePanel implements OnInit, OnChanges, OnDestroy {
       label: label ?? '',
     };
 
-    const maybe$ = (this.service as any).update?.(merged);
+    const maybe$ = (this.edgeService as any).update?.(merged);
     if (maybe$?.subscribe) {
       maybe$.subscribe(() => this.reset());
     } else {
-      (this.service as any).update?.(merged);
+      (this.edgeService as any).update?.(merged);
       this.reset();
     }
   }
@@ -174,11 +221,11 @@ export class EdgePanel implements OnInit, OnChanges, OnDestroy {
     if (id == null) return;
     if (this.editingId() === id) this.reset();
 
-    const maybe$ = (this.service as any).delete?.(id);
+    const maybe$ = (this.edgeService as any).delete?.(id);
     if (maybe$?.subscribe) {
       maybe$.subscribe();
     } else {
-      (this.service as any).delete?.(id);
+      (this.edgeService as any).delete?.(id);
     }
   }
 
@@ -203,7 +250,4 @@ export class EdgePanel implements OnInit, OnChanges, OnDestroy {
       label: '',
     });
   }
-
-  /** trackBy para *ngFor. */
-  trackById = (index: number, e: Edge) => e.id ?? index;
 }

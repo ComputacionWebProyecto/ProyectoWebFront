@@ -34,9 +34,8 @@ export class ActivityPanel implements OnInit, OnChanges, OnDestroy {
   private fb = inject(FormBuilder);
   private service = inject(ActivityService);
 
-  /** Stream de actividades (solo lectura). Ajusta aquí si tu servicio usa otro nombre. */
-  readonly activities$: Observable<Activity[]> =
-    (this.service as any).list$ ?? (this.service as any).items$;
+  /** Stream de actividades (solo lectura). */
+  readonly activities$: Observable<Activity[]> = this.service.list$;
 
   /** Estado de edición */
   readonly isEditing = signal(false);
@@ -66,14 +65,10 @@ export class ActivityPanel implements OnInit, OnChanges, OnDestroy {
 
   ngOnInit(): void {
     // Mantén un snapshot del stream para poder resolver el @Input activityId
-    if (this.activities$) {
-      this.sub = this.activities$.subscribe((list) => {
-        this.snapshot = list ?? [];
-        this.applyInputSelection(); // si ya hay un activityId, intenta cargarlo
-      });
-    } else {
-      console.warn('[ActivityPanel] No encontré stream de actividades (list$ / items$).');
-    }
+    this.sub = this.activities$.subscribe((list) => {
+      this.snapshot = list ?? [];
+      this.applyInputSelection(); // si ya hay un activityId, intenta cargarlo
+    });
   }
 
   ngOnChanges(changes: SimpleChanges): void {
