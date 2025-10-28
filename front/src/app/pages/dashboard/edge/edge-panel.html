@@ -17,6 +17,7 @@
 
   <!-- Formulario -->
   <form [formGroup]="form" (ngSubmit)="submit()" class="form" novalidate>
+    <!-- Proceso (opcional) -->
     <div class="row">
       <label for="processId">Proceso (opcional)</label>
       <input
@@ -31,53 +32,83 @@
       </small>
     </div>
 
+    <!-- Desde (select mixto) -->
     <div class="row">
-      <label for="activitySourceId">Desde (Actividad)</label>
-      <select
-        id="activitySourceId"
-        formControlName="activitySourceId"
-        aria-required="true"
-      >
-        <option [ngValue]="null" disabled>Selecciona actividad origen…</option>
-        <option
-          *ngFor="let a of activitiesSnapshot; trackBy: trackByAct"
-          [ngValue]="a.id"
-        >
-          #{{ a.id }} — {{ a.name || 'Sin nombre' }}
+      <label for="fromMixed">Desde</label>
+      <!-- Un solo select con dos grupos; el (change) actualiza fromType/fromId -->
+      <select id="fromMixed" (change)="onSelectFromKindId($event)" aria-required="true">
+        <option [value]="''" disabled [selected]="!form.value.fromType || !form.value.fromId">
+          Selecciona origen…
         </option>
+        <optgroup label="Actividades">
+          <option
+            *ngFor="let a of activitiesSnapshot; trackBy: trackByAct"
+            [value]="'activity:' + a.id"
+            [selected]="form.value.fromType==='activity' && form.value.fromId===a.id"
+          >
+            [A] #{{ a.id }} — {{ a.name || 'Sin nombre' }}
+          </option>
+        </optgroup>
+        <optgroup label="Gateways">
+          <option
+            *ngFor="let g of gatewaysSnapshot; trackBy: trackByGw"
+            [value]="'gateway:' + g.id"
+            [selected]="form.value.fromType==='gateway' && form.value.fromId===g.id"
+          >
+            [G] #{{ g.id }} — {{ g.type || 'Gateway' }}
+          </option>
+        </optgroup>
       </select>
-      <small class="error" *ngIf="form.get('activitySourceId')?.touched && form.get('activitySourceId')?.errors as e">
-        <ng-container *ngIf="e['required']">Requerido.</ng-container>
+      <small class="error" *ngIf="form.get('fromType')?.touched && form.get('fromType')?.errors?.['required']">
+        Debes seleccionar un origen.
+      </small>
+      <small class="error" *ngIf="form.get('fromId')?.touched && form.get('fromId')?.errors as e">
+        <ng-container *ngIf="e['required']">Debes seleccionar un origen.</ng-container>
         <ng-container *ngIf="e['min']">Debe ser &ge; 1.</ng-container>
       </small>
     </div>
 
+    <!-- Hacia (select mixto) -->
     <div class="row">
-      <label for="activityDestinyId">Hacia (Actividad)</label>
-      <select
-        id="activityDestinyId"
-        formControlName="activityDestinyId"
-        aria-required="true"
-      >
-        <option [ngValue]="null" disabled>Selecciona actividad destino…</option>
-        <option
-          *ngFor="let a of activitiesSnapshot; trackBy: trackByAct"
-          [ngValue]="a.id"
-        >
-          #{{ a.id }} — {{ a.name || 'Sin nombre' }}
+      <label for="toMixed">Hacia</label>
+      <select id="toMixed" (change)="onSelectToKindId($event)" aria-required="true">
+        <option [value]="''" disabled [selected]="!form.value.toType || !form.value.toId">
+          Selecciona destino…
         </option>
+        <optgroup label="Actividades">
+          <option
+            *ngFor="let a of activitiesSnapshot; trackBy: trackByAct"
+            [value]="'activity:' + a.id"
+            [selected]="form.value.toType==='activity' && form.value.toId===a.id"
+          >
+            [A] #{{ a.id }} — {{ a.name || 'Sin nombre' }}
+          </option>
+        </optgroup>
+        <optgroup label="Gateways">
+          <option
+            *ngFor="let g of gatewaysSnapshot; trackBy: trackByGw"
+            [value]="'gateway:' + g.id"
+            [selected]="form.value.toType==='gateway' && form.value.toId===g.id"
+          >
+            [G] #{{ g.id }} — {{ g.type || 'Gateway' }}
+          </option>
+        </optgroup>
       </select>
-      <small class="error" *ngIf="form.get('activityDestinyId')?.touched && form.get('activityDestinyId')?.errors as e">
-        <ng-container *ngIf="e['required']">Requerido.</ng-container>
+      <small class="error" *ngIf="form.get('toType')?.touched && form.get('toType')?.errors?.['required']">
+        Debes seleccionar un destino.
+      </small>
+      <small class="error" *ngIf="form.get('toId')?.touched && form.get('toId')?.errors as e">
+        <ng-container *ngIf="e['required']">Debes seleccionar un destino.</ng-container>
         <ng-container *ngIf="e['min']">Debe ser &ge; 1.</ng-container>
       </small>
 
-      <!-- Error cruzado: misma actividad -->
-      <small class="error" *ngIf="sameActivityError">
-        La actividad de origen y destino no puede ser la misma.
+      <!-- Error cruzado: mismo nodo (tipo+id) -->
+      <small class="error" *ngIf="sameEndpointError">
+        El origen y el destino no pueden ser el mismo nodo.
       </small>
     </div>
 
+    <!-- Etiqueta -->
     <div class="row">
       <label for="label">Etiqueta</label>
       <input
@@ -105,10 +136,26 @@
     <li *ngFor="let e of (edges$ | async); trackBy: trackById">
       <div class="item-main">
         <strong>#{{ e.id }}</strong>
-        <span class="muted">&nbsp;{{ e.activitySourceId }} → {{ e.activityDestinyId }}</span>
+
+        <!-- Representación tipada -->
+        <span class="muted">
+          &nbsp;
+          <ng-container [ngSwitch]="e.fromType">
+            <ng-container *ngSwitchCase="'gateway'">[G] #{{ e.fromId }}</ng-container>
+            <ng-container *ngSwitchDefault>[A] #{{ e.fromId ?? e.activitySourceId }}</ng-container>
+          </ng-container>
+          &nbsp;→&nbsp;
+          <ng-container [ngSwitch]="e.toType">
+            <ng-container *ngSwitchCase="'gateway'">[G] #{{ e.toId }}</ng-container>
+            <ng-container *ngSwitchDefault>[A] #{{ e.toId ?? e.activityDestinyId }}</ng-container>
+          </ng-container>
+        </span>
+
+        <!-- Compat: proceso y etiqueta -->
         <span class="muted" *ngIf="e.processId">&nbsp;(proc: {{ e.processId }})</span>
         <span class="muted" *ngIf="e.label">&nbsp;— {{ e.label }}</span>
       </div>
+
       <div class="item-actions">
         <button type="button" (click)="edit(e)">Editar</button>
         <button type="button" (click)="remove(e.id!)">Eliminar</button>

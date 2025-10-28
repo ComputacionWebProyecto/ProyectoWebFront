@@ -1,3 +1,4 @@
+// src/app/services/activity.service.ts
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, of } from 'rxjs';
 import { delay, map } from 'rxjs/operators';
@@ -26,11 +27,21 @@ export class ActivityService {
     return this.list$.pipe(map(list => list.find(a => a.id === id)));
   }
 
-  /** Crear */
+  /** Crear (con defaults seguros de tamaño y estado) */
   create(payload: Omit<Activity, 'id'>): Observable<Activity> {
     const current = this.store.value;
     const nextId = current.length ? Math.max(...current.map(a => a.id ?? 0)) + 1 : 1;
-    const created: Activity = { id: nextId, ...payload };
+
+    const created: Activity = {
+      id: nextId,
+      // Defaults por si no vienen
+      width: 100,
+      height: 60,
+      status: 'active',
+      // Lo que envía el caller tiene prioridad
+      ...payload,
+    };
+
     this.store.next([...current, created]);
     return of(created).pipe(delay(150));
   }
@@ -48,6 +59,13 @@ export class ActivityService {
   save(payload: Activity) { return this.update(payload); }
   put(payload: Activity) { return this.update(payload); }
   set(payload: Activity) { return this.update(payload); }
+
+  /** Mover actividad (helper de azúcar) */
+  move(id: number, x: number, y: number): Observable<Activity | undefined> {
+    const a = this.store.value.find(a => a.id === id);
+    if (!a) return of(undefined).pipe(delay(60));
+    return this.update({ ...a, x, y });
+  }
 
   /** Eliminar */
   delete(id: number): Observable<void> {

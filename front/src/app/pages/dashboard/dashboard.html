@@ -1,4 +1,3 @@
-<!-- dashboard.html — merge final (pan con Shift, líneas de edges solo en SVG, sin “burbujas” de edge) -->
 <div class="flex h-screen overflow-hidden">
   <!-- Sidebar -->
   <app-drop-menu
@@ -11,7 +10,8 @@
     <!-- Header fijo -->
     <app-header-dashboard
       [isSidebarOpen]="isSidebarOpen"
-      (toggleSidebar)="toggleSidebar()"
+      (toggleSidebar)="toggleSidebar()
+      "
       (toggleProcesses)="toggleProcessPanel()"
       (toggleUsers)="toggleUserPanel()"
       (toggleRoles)="onToggleRoles()">
@@ -42,23 +42,21 @@
               </marker>
             </defs>
 
-            <g *ngFor="let edgeCmp of boardComponents">
-              <ng-container *ngIf="edgeCmp.category === 'edge'">
-                <line
-                  *ngIf="edgeCoordsByComponent(edgeCmp) as c"
-                  [attr.x1]="c.x1" [attr.y1]="c.y1"
-                  [attr.x2]="c.x2" [attr.y2]="c.y2"
-                  stroke="#374151" stroke-width="2" stroke-opacity="0.9"
-                  marker-end="url(#arrow)">
-                </line>
-              </ng-container>
+            <g *ngFor="let edgeCmp of edgeComponents; trackBy: trackByEdge">
+              <line
+                *ngIf="edgeCoordsByComponent(edgeCmp) as c"
+                [attr.x1]="c.x1" [attr.y1]="c.y1"
+                [attr.x2]="c.x2" [attr.y2]="c.y2"
+                stroke="#374151" stroke-width="2" stroke-opacity="0.9"
+                marker-end="url(#arrow)">
+              </line>
             </g>
           </svg>
           <!-- Fin capa SVG -->
 
           <!-- Componentes (NO renderizamos edges como nodos) -->
           <div
-            *ngFor="let component of boardComponents"
+            *ngFor="let component of boardComponents; trackBy: trackByComponent"
             class="board-component absolute"
             [style.left.px]="component.x"
             [style.top.px]="component.y"

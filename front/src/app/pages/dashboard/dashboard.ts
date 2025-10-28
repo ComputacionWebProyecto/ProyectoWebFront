@@ -1,6 +1,3 @@
-// dashboard.ts — Merge final (pan + procesos/gateways backend + activities/edges + sin “pelotica” de edge)
-// Fuentes usadas: :contentReference[oaicite:0]{index=0}  :contentReference[oaicite:1]{index=1}
-
 import { ChangeDetectorRef, Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
@@ -484,21 +481,100 @@ export class Dashboard implements OnInit, OnDestroy {
     this.selectedEdgeId = null;
   }
 
+  // ---------------------------
+  // Helpers para extremos y centros
+  // ---------------------------
+
+  /** Resuelve el componente extremo (from/to) para un Edge:
+   *  - Usa tipos tipados (fromType/toType) cuando existen
+   *  - Fallback: si no hay tipo, asume 'activity' con los ids legados
+   *  - Busca en boardComponents el nodo correspondiente (activityId o gatewayId)
+   */
+  private resolveEndpoint(
+    edge: Edge,
+    which: 'from' | 'to'
+  ):
+    | { comp: BoardComponent; category: 'activity' | 'gateway' }
+    | null {
+    // 1) Tomar tipo+id desde el edge (tipado) con fallback a legado activity
+    const type = (which === 'from' ? edge.fromType : edge.toType) ?? 'activity';
+    const id =
+      which === 'from'
+        ? edge.fromId ?? (edge as any).activitySourceId ?? null
+        : edge.toId ?? (edge as any).activityDestinyId ?? null;
+
+    if (id == null) return null;
+
+    // 2) Buscar el componente en el canvas por categoría e id interno
+    if (type === 'activity') {
+      const comp = this.boardComponents.find(
+        (c) => c.category === 'activity' && c.activityId === id
+      );
+      return comp ? { comp, category: 'activity' } : null;
+    } else {
+      const comp = this.boardComponents.find(
+        (c) => c.category === 'gateway' && c.gatewayId === id
+      );
+      return comp ? { comp, category: 'gateway' } : null;
+    }
+  }
+
+  /** Centro geométrico del nodo según categoría y tamaño estándar:
+   *  Activity: 100×60  |  Gateway: 80×80
+   *  (usa width/height del componente si vinieran definidos)
+   */
+  private getCenterForNode(
+    comp: BoardComponent,
+    category: 'activity' | 'gateway'
+  ): { cx: number; cy: number } {
+    const defaultW = category === 'activity' ? 100 : 80;
+    const defaultH = category === 'activity' ? 60 : 80;
+
+    const w = comp.width ?? defaultW;
+    const h = comp.height ?? defaultH;
+
+    return { cx: comp.x + w / 2, cy: comp.y + h / 2 };
+  }
+
+  /** Lista derivada solo con edges (para el *ngFor del SVG) */
+  get edgeComponents(): BoardComponent[] {
+    // Evita filtrar en el template en cada detección de cambios
+    return this.boardComponents.filter(c => c.category === 'edge');
+  }
+
+  /** trackBy para cualquier componente del board */
+  trackByComponent = (_: number, c: BoardComponent) => c.id;
+
+  /** trackBy específico para edges en el SVG */
+  trackByEdge = (_: number, c: BoardComponent) => c.id;
+
   // ===== Líneas SVG (edges conectados) =====
   edgeCoordsByComponent(edgeCmp: BoardComponent): { x1: number; y1: number; x2: number; y2: number } | null {
-    if (edgeCmp.category !== 'edge' || edgeCmp.fromId == null || edgeCmp.toId == null) return null;
-    const from = this.boardComponents.find(
-      (c) => c.category === 'activity' && (c as any).activityId === edgeCmp.fromId
-    );
-    const to = this.boardComponents.find(
-      (c) => c.category === 'activity' && (c as any).activityId === edgeCmp.toId
-    );
-    if (!from || !to) return null;
-    const fromW = from.width ?? 100,
-      fromH = from.height ?? 60;
-    const toW = to.width ?? 100,
-      toH = to.height ?? 60;
-    return { x1: from.x + fromW / 2, y1: from.y + fromH / 2, x2: to.x + toW / 2, y2: to.y + toH / 2 };
+    if (edgeCmp.category !== 'edge') return null;
+
+    // 1) Ubicar el Edge real por id para leer tipos/ids tipados (o usar fallback desde el cmp)
+    const edge = this.edgesCache.find((e) => e.id === edgeCmp.edgeId) ?? ({} as Edge);
+
+    // Fallback de ids si el cache no lo encontró (compat con tu edgesLayer actual)
+    if ((edge as any).fromId == null && (edge as any).activitySourceId == null) {
+      (edge as any).fromId = edgeCmp.fromId ?? (edge as any).activitySourceId;
+    }
+    if ((edge as any).toId == null && (edge as any).activityDestinyId == null) {
+      (edge as any).toId = edgeCmp.toId ?? (edge as any).activityDestinyId;
+    }
+
+    // 2) Resolver extremos por tipo (con fallback a 'activity' si no hay tipo)
+    const fromResolved = this.resolveEndpoint(edge, 'from');
+    const toResolved   = this.resolveEndpoint(edge, 'to');
+
+    if (!fromResolved || !toResolved) return null;
+
+    // 3) Calcular centros según categoría y dimensiones acordadas
+    const { cx: x1, cy: y1 } = this.getCenterForNode(fromResolved.comp, fromResolved.category);
+    const { cx: x2, cy: y2 } = this.getCenterForNode(toResolved.comp, toResolved.category);
+
+    // IMPORTANTE: no restar pan; el SVG viaja dentro de .board-canvas con el mismo transform
+    return { x1, y1, x2, y2 };
   }
 
   // ===== Streams =====
@@ -559,8 +635,8 @@ export class Dashboard implements OnInit, OnDestroy {
 
         // NO dibujar “pelotica verde”: solo una entrada para que el SVG trace la línea.
         this.edgesLayer = this.edgesCache.map((e) => {
-          const src = (e as any).activitySourceId ?? e.fromId;
-          const dst = (e as any).activityDestinyId ?? e.toId;
+          const src = (e as any).activitySourceId ?? (e as any).fromId;
+          const dst = (e as any).activityDestinyId ?? (e as any).toId;
           return {
             id: `edge-${e.id ?? `local-${this.hash()}`}`,
             type: 'edge-line', // distinto a 'event-start' para que el HTML no dibuje círculo
