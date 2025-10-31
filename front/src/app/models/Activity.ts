@@ -1,17 +1,33 @@
+import { Process } from './Process';
+import { Role } from './Role';
+
+/**
+ * Activity DTO - Compatible con backend Spring Boot
+ * 
+ * Campos de ESCRITURA (crear/actualizar):
+ * - processId, roleId (enviar IDs)
+ * 
+ * Campos de LECTURA (respuesta backend):
+ * - process, role (objetos completos anidados)
+ */
 export interface Activity {
   id?: number;
-  name?: string;
-  description?: string;
+  name: string;
+  description: string;
 
-  // Posición y tamaño en el board
-  x?: number;
-  y?: number;
-  width?: number;
-  height?: number;
+  // Posición y tamaño en el board (CRÍTICO para canvas)
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 
-  // Relaciones opcionales
+  // Relaciones: enviar IDs al backend
   processId?: number;
   roleId?: number;
 
-  status?: 'active' | 'inactive';
+  // Objetos anidados (solo en respuestas del backend)
+  process?: Process;
+  role?: Role;
+
+  status: string; // 'active' | 'inactive'
 }

@@ -1,0 +1,83 @@
+<section class="panel" aria-labelledby="gateway-title">
+  <!-- Título + botón cerrar -->
+  <div class="flex items-center justify-between mb-4">
+    <h2 id="gateway-title" class="panel-title">
+      {{ editingId() ? 'Editar gateway' : 'Nuevo gateway' }}
+      <small *ngIf="editingId()" class="ml-2 text-slate-500">#{{ editingId() }}</small>
+    </h2>
+
+    <button
+      type="button"
+      (click)="onClose()"
+      aria-label="Cerrar panel"
+      class="panel-close"
+    >
+      &times;
+    </button>
+  </div>
+
+  <!-- Formulario -->
+  <form [formGroup]="form" (ngSubmit)="submit()" class="form" novalidate>
+    <!-- Tipo de gateway -->
+    <div class="row">
+      <label for="type">Tipo de Gateway</label>
+      <select id="type" formControlName="type" aria-required="true">
+        <option *ngFor="let t of gatewayTypes" [value]="t.value">
+          {{ t.label }}
+        </option>
+      </select>
+      <small class="error" *ngIf="form.get('type')?.touched && form.get('type')?.errors?.['required']">
+        Tipo requerido.
+      </small>
+    </div>
+
+    <!-- Proceso (opcional) -->
+    <div class="row">
+      <label for="processId">Proceso (opcional)</label>
+      <input
+        id="processId"
+        type="number"
+        formControlName="processId"
+        placeholder="Ej: 10"
+        min="1"
+      />
+      <small class="error" *ngIf="form.get('processId')?.touched && form.get('processId')?.errors?.['min']">
+        Debe ser ≥ 1.
+      </small>
+    </div>
+
+    <!-- Estado -->
+    <div class="row">
+      <label for="status">Estado</label>
+      <select id="status" formControlName="status">
+        <option value="active">Activo</option>
+        <option value="inactive">Inactivo</option>
+      </select>
+    </div>
+
+    <div class="actions">
+      <button type="submit" [disabled]="form.invalid">
+        {{ editingId() ? 'Actualizar' : 'Crear' }}
+      </button>
+      <button type="button" *ngIf="editingId()" (click)="cancel()">Cancelar</button>
+    </div>
+  </form>
+
+  <!-- Lista de gateways -->
+  <ul class="list" *ngIf="(gateways$ | async) as items; else emptyState">
+    <li *ngFor="let g of items; trackBy: trackById">
+      <div class="item-main">
+        <strong class="block truncate">#{{ g.id }} — {{ getGatewayLabel(g.type) }}</strong>
+        <span class="muted">&nbsp;({{ g.status }})</span>
+      </div>
+      <div class="item-actions">
+        <button type="button" (click)="edit(g)">Editar</button>
+        <button type="button" (click)="remove(g.id)">Eliminar</button>
+      </div>
+    </li>
+  </ul>
+
+  <ng-template #emptyState>
+    <p class="text-sm text-slate-500 mt-2">Aún no hay gateways.</p>
+  </ng-template>
+</section>

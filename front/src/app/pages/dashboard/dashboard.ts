@@ -19,6 +19,7 @@ import { EdgeService } from '../../services/edge.service';
 
 import { ActivityPanel } from './activity/activity-panel';
 import { EdgePanel } from './edge/edge-panel';
+import { GatewayPanel } from './gateway/gateway-panel';
 import { Subscription } from 'rxjs';
 
 interface BoardComponent {
@@ -53,6 +54,7 @@ interface BoardComponent {
     RolePanel,
     ActivityPanel,
     EdgePanel,
+    GatewayPanel,
   ],
   templateUrl: './dashboard.html',
   styleUrls: ['./dashboard.css'],
@@ -64,11 +66,12 @@ export class Dashboard implements OnInit, OnDestroy {
   isUserPanelOpen = false;
   isRolePanelOpen = false;
 
-  // Inspector lateral (activity/edge)
+  // Inspector lateral (activity/edge/gateway)
   inspectorOpen = false;
-  inspectorKind: 'activity' | 'edge' | null = null;
+  inspectorKind: 'activity' | 'edge' | 'gateway' | null = null;
   selectedActivityId: number | null = null;
   selectedEdgeId: number | null = null;
+  selectedGatewayId: number | null = null;
 
   // Tablero
   boardComponents: BoardComponent[] = [];
@@ -181,17 +184,11 @@ export class Dashboard implements OnInit, OnDestroy {
     this.activeProcessService.restoreActiveProcess();
     this.processSubscription = this.activeProcessService.activeProcessId$.subscribe((pid) => {
       this.currentProcessId = pid ?? null;
-      if (this.currentProcessId) {
-        this.loadGateways();
-      } else {
-        // si no hay proceso, ocultamos gateways; mantenemos capas locales de activity/edge
-        const onlyNonGateways = this.boardComponents.filter((c) => c.category !== 'gateway');
-        this.boardComponents = [...onlyNonGateways];
-      }
       this.cdr.detectChanges();
     });
 
-    // Streams
+    // Streams reactivos (se cargan automáticamente desde el store en memoria)
+    this.subscribeGatewaysStream();
     this.subscribeActivitiesStream();
     this.subscribeEdgesStream();
   }
@@ -226,49 +223,55 @@ export class Dashboard implements OnInit, OnDestroy {
     this.isSidebarOpen = !this.isSidebarOpen;
   }
 
-  // ===== Gateways (backend) =====
-  loadGateways(): void {
-    this.gatewayService.getGateways().subscribe({
-      next: (gateways: Gateway[]) => {
-        // limpiamos solo gateways previos para evitar duplicados y conservamos capas locales
-        const nonGateways = this.boardComponents.filter((c) => c.category !== 'gateway');
-        const gwComps: BoardComponent[] = [];
+  // ===== Gateways (en memoria, como Activities) =====
+  /**
+   * 🆕 Suscripción al stream reactivo de gateways (igual que activities/edges)
+   * Se actualiza automáticamente cuando el servicio cambia
+   */
+  private subscribeGatewaysStream(): void {
+    this.gatewayService.list$.subscribe((gateways: Gateway[]) => {
+      console.log('[Dashboard] subscribeGatewaysStream recibió:', gateways);
+      
+      // Filtrar solo activos
+      const activeGateways = gateways.filter(g => g.status === 'active' && g.id);
+      console.log('[Dashboard] Gateways activos:', activeGateways);
 
-        gateways.forEach((g) => {
-          if (g.status === 'active' && g.id) {
-            gwComps.push({
-              id: `gateway-${g.id}`,
-              type: g.type,
-              category: 'gateway',
-              x: g.x ?? 100,
-              y: g.y ?? 100,
-              label: this.getComponentLabel(g.type),
-              gatewayId: g.id,
-            });
-          }
-        });
+      // Convertir a BoardComponents
+      const gwLayer: BoardComponent[] = activeGateways.map(g => ({
+        id: `gateway-${g.id}`,
+        type: g.type,
+        category: 'gateway',
+        x: g.x ?? 100,
+        y: g.y ?? 100,
+        label: this.getComponentLabel(g.type),
+        gatewayId: g.id,
+      }));
 
-        this.boardComponents = [...gwComps, ...nonGateways];
-        this.recomputeBoardIncludeCurrentGateways();
-        this.cdr.detectChanges();
-      },
-      error: (e) => console.error('Error al cargar gateways:', e),
+      // Reemplazar solo la capa de gateways, mantener activities/edges
+      const nonGateways = this.boardComponents.filter(c => c.category !== 'gateway');
+      this.boardComponents = [...gwLayer, ...nonGateways];
+      console.log('[Dashboard] boardComponents actualizado:', this.boardComponents);
+      
+      this.cdr.detectChanges();
     });
   }
 
   updateGatewayPosition(component: BoardComponent): void {
     if (!component.gatewayId) return;
-    const gateway: Gateway = {
-      id: component.gatewayId,
-      type: component.type,
-      status: 'active',
-      x: component.x,
-      y: component.y,
-    };
-    this.gatewayService.updateGateway(component.gatewayId, gateway).subscribe({
-      next: () => console.log('Posición actualizada en backend'),
-      error: (e) => console.error('Error al actualizar posición:', e),
-    });
+    
+    // Actualizar en el servicio (en memoria)
+    const current = this.gatewayService.getCurrentSnapshot().find(g => g.id === component.gatewayId);
+    if (current) {
+      const updated: Gateway = {
+        ...current,
+        x: component.x,
+        y: component.y,
+      };
+      this.gatewayService.update(updated).subscribe({
+        next: () => console.log('[Dashboard] Gateway position updated'),
+        error: (e) => console.error('[Dashboard] Error updating gateway position:', e),
+      });
+    }
   }
 
   // ===== Drag & Drop =====
@@ -348,6 +351,10 @@ export class Dashboard implements OnInit, OnDestroy {
       this.selectedEdgeId = component.edgeId ?? null;
       this.inspectorKind = 'edge';
       this.inspectorOpen = true;
+    } else if (component.category === 'gateway') {
+      this.selectedGatewayId = component.gatewayId ?? null;
+      this.inspectorKind = 'gateway';
+      this.inspectorOpen = true;
     }
   }
 
@@ -386,7 +393,7 @@ export class Dashboard implements OnInit, OnDestroy {
         x: newComponent.x,
         y: newComponent.y,
       };
-      this.gatewayService.createGateway(gateway).subscribe({
+      this.gatewayService.create(gateway).subscribe({
         next: (saved: Gateway) => {
           const comp = this.boardComponents.find((c) => c.id === tempId);
           if (comp && saved.id) {
@@ -396,7 +403,7 @@ export class Dashboard implements OnInit, OnDestroy {
           this.cdr.detectChanges();
         },
         error: (err) => {
-          console.error('ERROR AL GUARDAR EN BACKEND', err);
+          console.error('[Dashboard] Error al crear gateway:', err);
         },
       });
       return;
@@ -437,13 +444,13 @@ export class Dashboard implements OnInit, OnDestroy {
     const component = this.boardComponents.find((c) => c.id === id);
 
     if (component?.gatewayId && component.category === 'gateway') {
-      this.gatewayService.deleteGateway(component.gatewayId).subscribe({
+      this.gatewayService.delete(component.gatewayId).subscribe({
         next: () => {
           this.boardComponents = this.boardComponents.filter((c) => c.id !== id);
           this.cdr.detectChanges();
         },
         error: (error) => {
-          console.error('Error al eliminar gateway:', error);
+          console.error('[Dashboard] Error al eliminar gateway:', error);
           this.boardComponents = this.boardComponents.filter((c) => c.id !== id);
         },
       });
@@ -466,12 +473,13 @@ export class Dashboard implements OnInit, OnDestroy {
   }
 
   // ===== Inspector =====
-  openInspector(kind: 'activity' | 'edge', component?: BoardComponent): void {
+  openInspector(kind: 'activity' | 'edge' | 'gateway', component?: BoardComponent): void {
     this.inspectorKind = kind;
     this.inspectorOpen = true;
     if (component) {
       if (kind === 'activity') this.selectedActivityId = component.activityId ?? null;
       if (kind === 'edge') this.selectedEdgeId = component.edgeId ?? null;
+      if (kind === 'gateway') this.selectedGatewayId = component.gatewayId ?? null;
     }
   }
   closeInspector(): void {
@@ -479,6 +487,7 @@ export class Dashboard implements OnInit, OnDestroy {
     this.inspectorKind = null;
     this.selectedActivityId = null;
     this.selectedEdgeId = null;
+    this.selectedGatewayId = null;
   }
 
   // ---------------------------
@@ -670,7 +679,11 @@ export class Dashboard implements OnInit, OnDestroy {
 
     const current = this.activitiesCache.find((a) => a.id === component.activityId) ?? null;
     const updated: Activity = {
-      ...(current ?? { id: component.activityId, name: component.label ?? 'Activity' }),
+      ...(current ?? { 
+        id: component.activityId, 
+        name: component.label ?? 'Activity',
+        description: '', 
+      }),
       x: component.x,
       y: component.y,
       width: (current as any)?.width ?? 100,

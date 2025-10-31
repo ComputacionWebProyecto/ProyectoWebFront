@@ -114,6 +114,7 @@ export class ActivityPanel implements OnInit, OnChanges, OnDestroy {
       y: raw.y,
       width: raw.width,
       height: raw.height,
+      status: 'active', 
       processId: raw.processId,
       roleId: raw.roleId,
     };

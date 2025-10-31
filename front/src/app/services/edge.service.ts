@@ -1,10 +1,28 @@
 // src/app/services/edge.service.ts
 import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, of } from 'rxjs';
-import { delay, map } from 'rxjs/operators';
+import { delay, map, tap } from 'rxjs/operators';
 import { Edge, EndpointKind } from '../models/Edge';
 
-// Internamente mantenemos compat para el Dashboard (fromId/toId) y legado (activitySourceId/activityDestinyId)
+/**
+ * EdgeService - Patrón Híbrido (Store Reactivo + HTTP preparado)
+ * 
+ * ESTADO ACTUAL: In-memory mock (desarrollo frontend)
+ * ESTADO FUTURO: HTTP al backend (activar descomentando métodos HTTP)
+ * 
+ * CARACTERÍSTICAS:
+ * - Soporta extremos tipados (fromType/fromId, toType/toId)
+ * - Mantiene compatibilidad legacy (activitySourceId/activityDestinyId)
+ * - Normaliza automáticamente edges al exponerlos
+ * 
+ * MIGRACIÓN A BACKEND:
+ * 1. Descomentar httpBaseUrl y constructor HttpClient
+ * 2. Reemplazar métodos mock por métodos HTTP (ya preparados abajo)
+ * 3. CERO cambios en componentes (usan streams ya)
+ */
+
+// Tipo interno con compat para el Dashboard (fromId/toId) y legado (activitySourceId/activityDestinyId)
 type EdgeCompat = Edge & {
   fromId?: number;
   toId?: number;
@@ -12,20 +30,56 @@ type EdgeCompat = Edge & {
 
 @Injectable({ providedIn: 'root' })
 export class EdgeService {
+  // 🔧 CONFIGURACIÓN BACKEND (descomentar cuando esté listo)
+  // private readonly httpBaseUrl = 'http://localhost:8080/api/edge';
+
   /**
-   * Store en memoria (sin backend).
+   * Store interno: cache local de edges
+   * 
+   * SOPORTE DE MÚLTIPLES CONEXIONES:
+   * ================================
+   * Un gateway (o activity) puede tener MÚLTIPLES edges salientes:
+   * 
+   *     Activity#1 ──────────→ Activity#2
+   *                            ↓
+   *     Gateway#1 ──Opción A──→ Activity#1
+   *          ↓
+   *          └──Opción B──→ Activity#2
+   * 
+   * Cada edge es independiente. No hay límite de conexiones.
+   * 
    * Contiene registros que pueden venir en formato legado (activitySourceId/activityDestinyId)
    * o ya en formato tipado (fromType/fromId/toType/toId). Siempre normalizamos al exponer streams.
    */
   private readonly store = new BehaviorSubject<EdgeCompat[]>([
-    // Ejemplo legado (A→A)
+    // Ejemplo 1: Activity → Activity (legado)
     {
       id: 1,
-      label: 'Flujo 1',
+      label: 'Flujo inicial',
+      description: '',
       processId: 1,
       activitySourceId: 1,
       activityDestinyId: 2,
-      // fromId/toId se rellenan por compat()
+      status: 'active',
+    },
+    // Ejemplo 2: Gateway → Activity (múltiples salidas desde Gateway#1)
+    {
+      id: 2,
+      label: 'Opción A',
+      fromType: 'gateway',
+      fromId: 1,
+      toType: 'activity',
+      toId: 1,
+      status: 'active',
+    },
+    // Ejemplo 3: Gateway → Activity (segunda salida desde Gateway#1)
+    {
+      id: 3,
+      label: 'Opción B',
+      fromType: 'gateway',
+      fromId: 1,
+      toType: 'activity',
+      toId: 2,
       status: 'active',
     },
   ]);
@@ -43,11 +97,10 @@ export class EdgeService {
     map(list => list.map(e => this.compat(e)))
   );
 
-  /** Aliases que ya usas en el Dashboard */
+  /** Aliases para compatibilidad con código existente */
   readonly items$ = this.list$;
-  list(): Observable<EdgeCompat[]> { return this.list$; }
-  getAll(): Observable<EdgeCompat[]> { return this.list$; }
-  getEdges(): Observable<EdgeCompat[]> { return this.list$; }
+  
+  // constructor(private http: HttpClient) {} // 🔧 Descomentar para HTTP
 
   /** Get por id */
   get(id: number): Observable<EdgeCompat | undefined> {
@@ -205,4 +258,102 @@ export class EdgeService {
 
     return { fromType, fromId, toType, toId };
   }
+
+  // ========================================
+  // 🔧 MÉTODOS HTTP (descomentar cuando backend esté listo)
+  // ========================================
+
+  /*
+  // ⚠️ IMPORTANTE: Al activar HTTP, reemplazar métodos create/update/delete
+  // por las versiones HTTP comentadas abajo
+
+  // POST /api/edge - Crear edge (tipado + compat legacy si A→A)
+  createEdgeHTTP(payload: Omit<Edge, 'id'>): Observable<Edge> {
+    const resolved = this.resolveEndpoints(payload);
+
+    const toSend: Omit<Edge, 'id'> = {
+      label: payload.label ?? '',
+      description: payload.description ?? '',
+      processId: payload.processId,
+      status: payload.status || 'active',
+      fromType: resolved.fromType,
+      fromId: resolved.fromId,
+      toType: resolved.toType,
+      toId: resolved.toId,
+    };
+
+    // Si es A→A, agregar campos legacy para compatibilidad con backend viejo
+    if (resolved.fromType === 'activity' && resolved.toType === 'activity') {
+      (toSend as any).activitySourceId = resolved.fromId;
+      (toSend as any).activityDestinyId = resolved.toId;
+    }
+
+    return this.http.post<Edge>(this.httpBaseUrl, toSend).pipe(
+      tap(created => {
+        const current = this.store.value;
+        this.store.next([...current, this.compat(created)]);
+      })
+    );
+  }
+
+  // PUT /api/edge - Actualizar edge
+  updateEdgeHTTP(payload: Edge): Observable<Edge> {
+    if (payload.id == null) throw new Error('Edge inválido: falta id para actualizar.');
+
+    const resolved = this.resolveEndpoints(payload);
+
+    const toSend: Edge = {
+      ...payload,
+      fromType: resolved.fromType,
+      fromId: resolved.fromId,
+      toType: resolved.toType,
+      toId: resolved.toId,
+    };
+
+    // Si es A→A, agregar campos legacy
+    if (resolved.fromType === 'activity' && resolved.toType === 'activity') {
+      (toSend as any).activitySourceId = resolved.fromId;
+      (toSend as any).activityDestinyId = resolved.toId;
+    } else {
+      // Si NO es A→A, limpiar campos legacy
+      (toSend as any).activitySourceId = undefined;
+      (toSend as any).activityDestinyId = undefined;
+    }
+
+    return this.http.put<Edge>(this.httpBaseUrl, toSend).pipe(
+      tap(updated => {
+        const current = this.store.value;
+        const index = current.findIndex(e => e.id === payload.id);
+        
+        if (index !== -1) {
+          const newList = [...current];
+          newList[index] = this.compat(updated);
+          this.store.next(newList);
+        }
+      })
+    );
+  }
+
+  // GET /api/edge - Listar todos los edges
+  getAllEdgesHTTP(): Observable<Edge[]> {
+    return this.http.get<Edge[]>(this.httpBaseUrl).pipe(
+      tap(edges => this.store.next(edges.map(e => this.compat(e))))
+    );
+  }
+
+  // GET /api/edge/{id} - Obtener por id
+  getEdgeById(id: number): Observable<Edge> {
+    return this.http.get<Edge>(`${this.httpBaseUrl}/${id}`);
+  }
+
+  // DELETE /api/edge/{id} - Eliminar
+  deleteEdgeHTTP(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.httpBaseUrl}/${id}`).pipe(
+      tap(() => {
+        const current = this.store.value;
+        this.store.next(current.filter(e => e.id !== id));
+      })
+    );
+  }
+  */
 }

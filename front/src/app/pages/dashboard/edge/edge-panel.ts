@@ -139,6 +139,7 @@ export class EdgePanel implements OnInit, OnChanges, OnDestroy {
     if (this.activities$) {
       this.actsSub = this.activities$.subscribe((acts) => {
         this.activitiesSnapshot = acts ?? [];
+        console.log('[EdgePanel] Activities snapshot actualizado:', this.activitiesSnapshot.length, 'items');
       });
     } else {
       console.warn('[EdgePanel] No encontré stream de activities para selects.');
@@ -147,14 +148,12 @@ export class EdgePanel implements OnInit, OnChanges, OnDestroy {
     if (this.gateways$) {
       this.gwsSub = this.gateways$.subscribe((gws) => {
         this.gatewaysSnapshot = gws ?? [];
+        console.log('[EdgePanel] Gateways recibidos en snapshot:', this.gatewaysSnapshot.length, 'items', this.gatewaysSnapshot);
         this.cdr.detectChanges();
       });
     } else {
       console.warn('[EdgePanel] No encontré stream de gateways para selects.');
     }
-
-    // Fuerza una carga HTTP por si el servicio no expone list$
-    this.forceLoadGateways();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -165,25 +164,6 @@ export class EdgePanel implements OnInit, OnChanges, OnDestroy {
     this.edgesSub?.unsubscribe();
     this.actsSub?.unsubscribe();
     this.gwsSub?.unsubscribe();
-  }
-
-  // ===== Carga imperativa de gateways =====
-  /** Asegura snapshot poblado incluso si solo hay métodos HTTP fríos */
-  private forceLoadGateways(): void {
-    this.gatewayService.getGateways().subscribe({
-      next: (gws) => {
-        const incoming = gws ?? [];
-        const changed =
-          incoming.length !== this.gatewaysSnapshot.length ||
-          incoming.some((g, i) => g?.id !== this.gatewaysSnapshot[i]?.id);
-
-        if (changed) {
-          this.gatewaysSnapshot = incoming;
-          this.cdr.detectChanges();
-        }
-      },
-      error: (err) => console.warn('[EdgePanel] getGateways() falló:', err),
-    });
   }
 
   // ===== Validaciones =====

@@ -35,12 +35,18 @@
     <!-- Desde (select mixto) -->
     <div class="row">
       <label for="fromMixed">Desde</label>
+      
+      <!-- DEBUG: Mostrar conteo -->
+      <small class="text-xs text-gray-500 mb-1 block">
+        Actividades: {{ activitiesSnapshot.length || 0 }} | Gateways: {{ gatewaysSnapshot.length || 0 }}
+      </small>
+      
       <!-- Un solo select con dos grupos; el (change) actualiza fromType/fromId -->
       <select id="fromMixed" (change)="onSelectFromKindId($event)" aria-required="true">
         <option [value]="''" disabled [selected]="!form.value.fromType || !form.value.fromId">
           Selecciona origen…
         </option>
-        <optgroup label="Actividades">
+        <optgroup label="Actividades" *ngIf="activitiesSnapshot && activitiesSnapshot.length > 0">
           <option
             *ngFor="let a of activitiesSnapshot; trackBy: trackByAct"
             [value]="'activity:' + a.id"
@@ -49,7 +55,7 @@
             [A] #{{ a.id }} — {{ a.name || 'Sin nombre' }}
           </option>
         </optgroup>
-        <optgroup label="Gateways">
+        <optgroup label="Gateways" *ngIf="gatewaysSnapshot && gatewaysSnapshot.length > 0">
           <option
             *ngFor="let g of gatewaysSnapshot; trackBy: trackByGw"
             [value]="'gateway:' + g.id"
@@ -75,7 +81,7 @@
         <option [value]="''" disabled [selected]="!form.value.toType || !form.value.toId">
           Selecciona destino…
         </option>
-        <optgroup label="Actividades">
+        <optgroup label="Actividades" *ngIf="activitiesSnapshot && activitiesSnapshot.length > 0">
           <option
             *ngFor="let a of activitiesSnapshot; trackBy: trackByAct"
             [value]="'activity:' + a.id"
@@ -84,7 +90,7 @@
             [A] #{{ a.id }} — {{ a.name || 'Sin nombre' }}
           </option>
         </optgroup>
-        <optgroup label="Gateways">
+        <optgroup label="Gateways" *ngIf="gatewaysSnapshot && gatewaysSnapshot.length > 0">
           <option
             *ngFor="let g of gatewaysSnapshot; trackBy: trackByGw"
             [value]="'gateway:' + g.id"
