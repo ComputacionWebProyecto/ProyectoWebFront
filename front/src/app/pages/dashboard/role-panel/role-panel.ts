@@ -24,7 +24,9 @@ export class RolePanel implements OnInit {
   constructor(private roleService: RoleService, private authService: AuthService) {}
 
   ngOnInit(): void {
-    this.loadRoles();
+    // Ejecutar loadRoles de forma asíncrona para evitar
+    // ExpressionChangedAfterItHasBeenCheckedError
+    setTimeout(() => this.loadRoles(), 0);
   }
 
   loadRoles() {
@@ -63,7 +65,9 @@ export class RolePanel implements OnInit {
     request$.subscribe({
       next: () => {
         this.isCreating = false;
-        this.loadRoles();
+        // Ejecutar loadRoles de forma asíncrona para evitar
+        // ExpressionChangedAfterItHasBeenCheckedError
+        setTimeout(() => this.loadRoles(), 0);
       },
       error: (err) => console.error('Error saving role', err)
     });
@@ -73,21 +77,25 @@ export class RolePanel implements OnInit {
     if (!confirm('¿Eliminar (inactivar) este rol?')) return;
 
     this.roleService.deleteRole(roleId).subscribe({
-      next: () => this.loadRoles(),
+      next: () => {
+        // Ejecutar loadRoles de forma asíncrona para evitar
+        // ExpressionChangedAfterItHasBeenCheckedError
+        setTimeout(() => this.loadRoles(), 0);
+      },
       error: (err) => {
         alert('No se puede eliminar: el rol está en uso o el servidor lo rechazó.');
         console.error('Error deleting role', err);
       }
     });
+  }
+  enterEditMode()   {
+      this.mode = this.mode === 'edit'   ? 'none' : 'edit';
     }
-  enterEditMode()   { 
-      this.mode = this.mode === 'edit'   ? 'none' : 'edit'; 
-    }
-  enterDeleteMode() { 
+  enterDeleteMode() {
       this.mode = this.mode === 'delete' ? 'none' : 'delete';
     }
-  enterConsultMode(){ 
-      this.mode = this.mode === 'consult'? 'none' : 'consult'; 
+  enterConsultMode(){
+      this.mode = this.mode === 'consult'? 'none' : 'consult';
     }
 
 

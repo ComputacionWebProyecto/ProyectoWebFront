@@ -132,6 +132,7 @@ import { Activity } from '../../../models/Activity';
 import { ActivityService } from '../../../services/activity.service';
 import { Gateway } from '../../../models/Gateway';
 import { GatewayService } from '../../../services/gateway.service';
+import { ActiveProcessService } from '../../../services/active-process.service';
 
 @Component({
   selector: 'app-edge-panel',
@@ -164,11 +165,13 @@ export class EdgePanel implements OnInit, OnChanges, OnDestroy {
 
   /**
    * INYECCIÓN DE DEPENDENCIAS
-   *
+   * Este componente necesita cinco servicios:
    * Este componente necesita cuatro servicios:
    * - FormBuilder: Constructor de formularios reactivos
    * - EdgeService: Servicio de gestión de edges (conexiones)
    * - ActivityService: Servicio de gestión de actividades (para poblar selects)
+   * - ActiveProcessService: Gestión del proceso activo (para auto-rellenar processId)
+   * - ActiveProcessService: Gestión del proceso activo (para auto-rellenar processId)
    * - GatewayService: Servicio de gestión de gateways (para poblar selects)
    * - ChangeDetectorRef: Forzar detección de cambios en operaciones asíncronas
    *
@@ -181,6 +184,7 @@ export class EdgePanel implements OnInit, OnChanges, OnDestroy {
   private edgeService = inject(EdgeService);
   private activityService = inject(ActivityService);
   private gatewayService = inject(GatewayService);
+  private activeProcessService = inject(ActiveProcessService);
   private cdr = inject(ChangeDetectorRef);
 
   /**
@@ -372,20 +376,34 @@ export class EdgePanel implements OnInit, OnChanges, OnDestroy {
    * CICLO DE VIDA: INICIALIZACIÓN
    *
    * Se ejecuta una vez al crear el componente.
+   * 1. Auto-rellena processId con el proceso activo desde ActiveProcessService
+   * 2. Deshabilita el campo processId si hay proceso activo (evita confusión)
+   * 3. Suscribe a edges$ para mantener edgeSnapshot actualizado
+   * 4. Suscribe a activities$ para mantener activitiesSnapshot actualizado
+   * 5. Suscribe a gateways$ para mantener gatewaysSnapshot actualizado
+   * 6. Cada suscripción verifica existencia del stream antes de suscribir
+   * 7. Muestra warnings en consola si falta algún stream
+   * 8. Logs de debug muestran cantidad de items recibidos
+   * 9. Llama a cdr.detectChanges() después de actualizar snapshots
    *
-   * COMPORTAMIENTO:
-   * 1. Suscribe a edges$ para mantener edgeSnapshot actualizado
-   * 2. Suscribe a activities$ para mantener activitiesSnapshot actualizado
-   * 3. Suscribe a gateways$ para mantener gatewaysSnapshot actualizado
-   * 4. Cada suscripción verifica existencia del stream antes de suscribir
-   * 5. Muestra warnings en consola si falta algún stream
-   * 6. Logs de debug muestran cantidad de items recibidos
-   * 7. Llama a cdr.detectChanges() después de actualizar gatewaysSnapshot
+   * AUTO-RELLENO DE PROCESSID:
+   * Obtiene el proceso activo y automáticamente llena el campo processId,
+   * resolviendo el problema de que el usuario no sepa qué ID poner.
+   * Si hay proceso activo, el campo se deshabilita para evitar cambios accidentales.
+   * 6. Cada suscripción verifica existencia del stream antes de suscribir
+   * 7. Muestra warnings en consola si falta algún stream
+   * 8. Logs de debug muestran cantidad de items recibidos
+   * 9. Llama a cdr.detectChanges() después de actualizar snapshots
+   *
+   * AUTO-RELLENO DE PROCESSID:
+   * Obtiene el proceso activo y automáticamente llena el campo processId,
+   * resolviendo el problema de que el usuario no sepa qué ID poner.
+   * Si hay proceso activo, el campo se deshabilita para evitar cambios accidentales.
    *
    * PROPÓSITO DE TRIPLE SUSCRIPCIÓN:
    * Este componente necesita tres streams porque debe mostrar:
    * - Lista de edges existentes (para mostrar en panel)
-   * - Lista de activities disponibles (para poblar selects)
+   * snapshots porque en algunos casos Angular no detecta automáticamente
    * - Lista de gateways disponibles (para poblar selects)
    *
    * LOGS DE DEBUGGING:
@@ -393,8 +411,23 @@ export class EdgePanel implements OnInit, OnChanges, OnDestroy {
    * y es útil ver cuántos items se reciben de cada tipo durante desarrollo.
    *
    * CHANGE DETECTION:
+    // Auto-rellenar processId con el proceso activo
+    const activeProcessId = this.activeProcessService.getActiveProcessId();
+    const activeProcess = this.activeProcessService.getActiveProcess();
+
+    if (activeProcessId) {
+      this.edgeForm.patchValue({ processId: activeProcessId });
+      // Deshabilitar el campo para evitar confusión
+      this.edgeForm.get('processId')?.disable();
+      console.log(`[EdgePanel] ✅ Auto-rellenado processId: ${activeProcessId} (${activeProcess?.name || 'sin nombre'})`);
+    } else {
+      // Si no hay proceso activo, el campo queda habilitado y obligatorio
+      this.edgeForm.get('processId')?.enable();
+      console.warn('[EdgePanel] ⚠️ No hay proceso activo. El usuario debe seleccionar uno primero.');
+    }
+
    * Se llama explícitamente a detectChanges() después de actualizar
-   * gatewaysSnapshot porque en algunos casos Angular no detecta automáticamente
+   * snapshots porque en algunos casos Angular no detecta automáticamente
    * los cambios en arrays públicos usados por *ngFor.
    *
    * MANEJO DE ERRORES:
@@ -402,6 +435,21 @@ export class EdgePanel implements OnInit, OnChanges, OnDestroy {
    * El panel seguirá operativo aunque algún select quede vacío.
    */
   ngOnInit(): void {
+    // Auto-rellenar processId con el proceso activo
+    const activeProcessId = this.activeProcessService.getActiveProcessId();
+    const activeProcess = this.activeProcessService.getActiveProcess();
+
+    if (activeProcessId) {
+      this.form.patchValue({ processId: activeProcessId });
+      // Deshabilitar el campo para evitar confusión
+      this.form.get('processId')?.disable();
+      console.log(`[EdgePanel] ✅ Auto-rellenado processId: ${activeProcessId} (${activeProcess?.name || 'sin nombre'})`);
+    } else {
+      // Si no hay proceso activo, el campo queda habilitado y obligatorio
+      this.form.get('processId')?.enable();
+      console.warn('[EdgePanel] ⚠️ No hay proceso activo. El usuario debe seleccionar uno primero.');
+    }
+
     if (this.edges$) {
       this.edgesSub = this.edges$.subscribe((list) => {
         this.edgeSnapshot = list ?? [];
@@ -743,7 +791,7 @@ export class EdgePanel implements OnInit, OnChanges, OnDestroy {
    * INVOCACIÓN:
    * Llamado desde el template con (ngSubmit)="submit()".
    */
-  submit(): void {
+  public submit(): void {
     if (!this.form.valid) return;
     this.editingId() ? this.update() : this.create();
   }
@@ -752,21 +800,28 @@ export class EdgePanel implements OnInit, OnChanges, OnDestroy {
    * Crea un nuevo edge con formato typed + compatibilidad legacy.
    *
    * VALIDACIONES:
+   * - Verifica que haya un proceso activo antes de crear
    * - Verifica que fromType, toType, fromId, toId estén definidos
    * - Si falta algún campo requerido, aborta sin hacer nada
    *
+   * OBTENCIÓN DE PROCESSID:
+   * El campo processId puede estar deshabilitado (si hay proceso activo),
+   * por lo que se usa getRawValue() o se obtiene del servicio directamente.
+   * Esto resuelve el problema de que el usuario no sepa qué ID poner.
+   *
    * COMPORTAMIENTO:
-   * 1. Extrae valores del formulario con destructuring
-   * 2. Valida que los campos typed estén completos
-   * 3. Construye payload Omit<Edge, 'id'> con campos modernos
-   * 4. Convierte processId null a undefined para consistencia
-   * 5. Establece status='active' por defecto
-   * 6. Si es conexión A→A, agrega campos legacy (activitySourceId/activityDestinyId)
-   * 7. Si no es A→A, los campos legacy no se agregan (quedan undefined)
-   * 8. Llama a edgeService.create() con el payload
-   * 9. Usa duck typing para manejar Observable/void
-   * 10. Si retorna Observable, suscribe y resetea al éxito
-   * 11. Si retorna void, ejecuta directamente y resetea
+   * 1. Obtiene processId del formulario (puede estar deshabilitado) o del servicio
+   * 2. Valida que haya proceso activo, si no muestra error y aborta
+   * 3. Extrae valores del formulario con destructuring
+   * 4. Valida que los campos typed estén completos
+   * 5. Construye payload Omit<Edge, 'id'> con campos modernos
+   * 6. Establece status='active' por defecto
+   * 7. Si es conexión A→A, agrega campos legacy (activitySourceId/activityDestinyId)
+   * 8. Si no es A→A, los campos legacy no se agregan (quedan undefined)
+   * 9. Llama a edgeService.create() con el payload
+   * 10. Usa duck typing para manejar Observable/void
+   * 11. Si retorna Observable, suscribe y resetea al éxito
+   * 12. Si retorna void, ejecuta directamente y resetea
    *
    * COMPATIBILIDAD AUTOMÁTICA:
    * El código detecta si es una conexión activity→activity y automáticamente
@@ -780,11 +835,30 @@ export class EdgePanel implements OnInit, OnChanges, OnDestroy {
    *   fromId: 5,
    *   toType: 'activity',
    *   toId: 8,
-   *   activitySourceId: 5,      // agregado automáticamente
-   *   activityDestinyId: 8,     // agregado automáticamente
+    // Obtener processId del formulario (puede estar deshabilitado) o del servicio
+    const rawFormValue = this.form.getRawValue();
+    let processId = rawFormValue.processId;
+
+    // Si no hay processId en el formulario, intentar obtenerlo del servicio
+    if (!processId) {
+      processId = this.activeProcessService.getActiveProcessId();
+    }
+
+    // Validar que haya proceso activo
+    if (!processId) {
+      console.error('[EdgePanel] ❌ No hay proceso activo seleccionado. Selecciona un proceso primero.');
+      alert('Error: No hay un proceso activo seleccionado. Selecciona un proceso primero.');
+      return;
+    }
+
+    const { label, fromType, fromId, toType, toId } = rawFormValue;
+    if (!fromType || !toType || fromId == null || toId == null) {
+      console.warn('[EdgePanel] ⚠️ Campos obligatorios incompletos:', { fromType, fromId, toType, toId });
+      return;
+    }
    *   label: 'Flujo normal',
    *   status: 'active',
-   *   processId: 1
+      processId: processId as number,
    * }
    * ```
    *
@@ -811,11 +885,30 @@ export class EdgePanel implements OnInit, OnChanges, OnDestroy {
    * otro edge sin cerrar el panel.
    */
   private create(): void {
-    const { processId, label, fromType, fromId, toType, toId } = this.form.value;
-    if (!fromType || !toType || fromId == null || toId == null) return;
+    // Obtener processId del formulario (puede estar deshabilitado) o del servicio
+    const rawFormValue = this.form.getRawValue();
+    let processId = rawFormValue.processId;
+
+    // Si no hay processId en el formulario, intentar obtenerlo del servicio
+    if (!processId) {
+      processId = this.activeProcessService.getActiveProcessId();
+    }
+
+    // Validar que haya proceso activo
+    if (!processId) {
+      console.error('[EdgePanel] ❌ No hay proceso activo seleccionado. Selecciona un proceso primero.');
+      alert('Error: No hay un proceso activo seleccionado. Selecciona un proceso primero.');
+      return;
+    }
+
+    const { label, fromType, fromId, toType, toId } = rawFormValue;
+    if (!fromType || !toType || fromId == null || toId == null) {
+      console.warn('[EdgePanel] ⚠️ Campos obligatorios incompletos:', { fromType, fromId, toType, toId });
+      return;
+    }
 
     const payload: Omit<Edge, 'id'> = {
-      processId: (processId ?? undefined) as any,
+      processId: processId as number,
       label: label ?? '',
       status: 'active',
       fromType,

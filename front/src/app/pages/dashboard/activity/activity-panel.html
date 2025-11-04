@@ -63,8 +63,12 @@
       <div class="item-main">
         <strong class="block truncate">{{ a.name }}</strong>
         <span class="muted" *ngIf="a.description">&nbsp;— {{ a.description }}</span>
+        <span class="muted text-xs" *ngIf="a.x != null && a.y != null">
+          &nbsp;📍 ({{ a.x }}, {{ a.y }})
+        </span>
       </div>
       <div class="item-actions">
+        <button type="button" (click)="navigateToActivity(a)" title="Ir a posición">🧭</button>
         <button type="button" (click)="edit(a)">Editar</button>
         <button type="button" (click)="remove(a.id!)">Eliminar</button>
       </div>

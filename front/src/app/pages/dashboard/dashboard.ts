@@ -201,6 +201,24 @@ interface BoardComponent {
 })
 export class Dashboard implements OnInit, OnDestroy {
   /**
+   * LÍMITES DEL CANVAS
+   *
+   * Define el área navegable del canvas para evitar que los usuarios
+   * se pierdan en coordenadas infinitas.
+   *
+   * RANGO: -1500 a +1500 en ambos ejes (X e Y)
+   *
+   * PROPÓSITO:
+   * - Prevenir navegación infinita
+   * - Mantener elementos en área visible
+   * - Mejorar usabilidad
+   */
+  readonly MIN_CANVAS_X = -1500;
+  readonly MAX_CANVAS_X = 1500;
+  readonly MIN_CANVAS_Y = -1500;
+  readonly MAX_CANVAS_Y = 1500;
+
+  /**
    * PROPIEDADES DE CONTROL DE UI
    *
    * Gestionan la visibilidad y estado de los diferentes paneles laterales.
@@ -468,7 +486,7 @@ export class Dashboard implements OnInit, OnDestroy {
    * Filtrar activities/edges/gateways que pertenecen al proceso actual.
    *
    * SINCRONIZACIÓN:
-   * Se actualiza automáticamente vía suscripción a activeProcessId$ en ngOnInit.
+   * Se actualiza automáticamente vía suscripción a currentProcess$ en ngOnInit.
    *
    * PERSISTENCIA:
    * ActiveProcessService restaura el proceso activo desde localStorage al iniciar.
@@ -476,10 +494,22 @@ export class Dashboard implements OnInit, OnDestroy {
   currentProcessId: number | null = null;
 
   /**
+   * Nombre del proceso actualmente activo.
+   *
+   * PROPÓSITO:
+   * Mostrar al usuario en qué proceso está trabajando mediante texto legible,
+   * no solo un ID numérico de la base de datos.
+   *
+   * EJEMPLO:
+   * "Proceso de Aprobación de Compras" en lugar de "ID: 67"
+   */
+  currentProcessName: string | null = null;
+
+  /**
    * Suscripción al stream de proceso activo.
    *
    * PROPÓSITO:
-   * Mantener sincronizado currentProcessId con el servicio.
+   * Mantener sincronizado currentProcessId y currentProcessName con el servicio.
    *
    * LIMPIEZA:
    * Se cancela en ngOnDestroy para prevenir memory leaks.
@@ -494,6 +524,27 @@ export class Dashboard implements OnInit, OnDestroy {
    */
 
   /**
+   * Nivel de zoom del canvas.
+   *
+   * VALORES:
+   * - 1.0: Tamaño normal (100%)
+   * - 0.5: Reducido al 50% (vista macro)
+   * - 2.0: Ampliado al 200% (vista micro)
+   *
+   * RANGO PERMITIDO:
+   * Mínimo: 0.1 (10%) - Máximo: 5.0 (500%)
+   *
+   * APLICACIÓN:
+   * Se usa en getCanvasTransform() para aplicar scale() CSS.
+   *
+   * CONTROLES:
+   * - Scroll del mouse (Ctrl+Scroll): ajusta zoom
+   * - Botones +/- en UI: incrementos de 0.1
+   * - Botón Reset: vuelve a 1.0
+   */
+  zoomLevel = 1.0;
+
+  /**
    * Indica si el usuario está actualmente panning (arrastrando el canvas).
    *
    * ACTIVACIÓN:
@@ -501,7 +552,7 @@ export class Dashboard implements OnInit, OnDestroy {
    * - Click botón central del mouse
    *
    * CONDICIONES:
-   * Solo se activa si NO se hace click sobre un componente, sidebar o header.
+   * - Solo se activa si NO se hace click sobre un componente, sidebar o header.
    */
   isPanning = false;
 
@@ -750,8 +801,21 @@ export class Dashboard implements OnInit, OnDestroy {
       event.preventDefault();
       const dx = event.clientX - this.lastMouseX;
       const dy = event.clientY - this.lastMouseY;
-      this.panOffsetX = this.startPanX + dx;
-      this.panOffsetY = this.startPanY + dy;
+
+      // Calcular nuevo offset sin límites
+      let newPanX = this.startPanX + dx;
+      let newPanY = this.startPanY + dy;
+
+      // Aplicar límites del canvas (-1500 a +1500)
+      // Los límites se ajustan según el zoom para mantener consistencia visual
+      const limitX = this.MAX_CANVAS_X * this.zoomLevel;
+      const limitY = this.MAX_CANVAS_Y * this.zoomLevel;
+
+      newPanX = Math.max(-limitX, Math.min(limitX, newPanX));
+      newPanY = Math.max(-limitY, Math.min(limitY, newPanY));
+
+      this.panOffsetX = newPanX;
+      this.panOffsetY = newPanY;
       this.cdr.detectChanges();
     }
   }
@@ -784,27 +848,229 @@ export class Dashboard implements OnInit, OnDestroy {
    * Utilidad: Generar CSS transform para el canvas
    *
    * PROPÓSITO:
-   * Crear string CSS para aplicar el desplazamiento acumulado del canvas.
+   * Crear string CSS para aplicar desplazamiento (pan) y zoom (scale) al canvas.
    *
    * RETORNO:
-   * String en formato: "translate(Xpx, Ypx)"
+   * String en formato: "translate(Xpx, Ypx) scale(Z)"
+   *
+   * ORDEN DE TRANSFORMACIONES:
+   * 1. translate: Desplaza el canvas (pan)
+   * 2. scale: Aplica zoom (ampliación/reducción)
    *
    * USO:
    * Se aplica al contenedor principal del canvas vía [style.transform]
    * en el template HTML.
    *
    * EJEMPLO:
-   * Si panOffsetX=100, panOffsetY=-50 → "translate(100px, -50px)"
+   * - panOffsetX=100, panOffsetY=-50, zoomLevel=1.5
+   * - Retorna: "translate(100px, -50px) scale(1.5)"
+   *
+   * NOTA:
+   * El orden importa: translate antes de scale para que el pan
+   * no se vea afectado por el nivel de zoom.
    */
   getCanvasTransform(): string {
-    return `translate(${this.panOffsetX}px, ${this.panOffsetY}px)`;
+    return `translate(${this.panOffsetX}px, ${this.panOffsetY}px) scale(${this.zoomLevel})`;
   }
 
   /**
-   * Utilidad: Obtener etiqueta legible para tipo de componente
+   * SISTEMA DE ZOOM
+   *
+   * Permite ampliar o reducir la vista del canvas para facilitar
+   * el trabajo con procesos grandes (vista macro) o detalle fino (vista micro).
+   */
+
+  /**
+   * Aumenta el nivel de zoom del canvas.
+   *
+   * INCREMENTO: +0.1 por cada llamada (10%)
+   * MÁXIMO: 5.0 (500%)
+   */
+  zoomIn(): void {
+    if (this.zoomLevel < 5.0) {
+      this.zoomLevel = Math.min(5.0, this.zoomLevel + 0.1);
+      this.zoomLevel = Math.round(this.zoomLevel * 10) / 10;
+      console.log(`[Dashboard] Zoom In: ${Math.round(this.zoomLevel * 100)}%`);
+    }
+  }
+
+  /**
+   * Reduce el nivel de zoom del canvas.
+   *
+   * DECREMENTO: -0.1 por cada llamada (10%)
+   * MÍNIMO: 0.1 (10%)
+   */
+  zoomOut(): void {
+    if (this.zoomLevel > 0.1) {
+      this.zoomLevel = Math.max(0.1, this.zoomLevel - 0.1);
+      this.zoomLevel = Math.round(this.zoomLevel * 10) / 10;
+      console.log(`[Dashboard] Zoom Out: ${Math.round(this.zoomLevel * 100)}%`);
+    }
+  }
+
+  /**
+   * Resetea el zoom a nivel normal (100%).
+   */
+  resetZoom(): void {
+    this.zoomLevel = 1.0;
+    console.log('[Dashboard] Zoom Reset: 100%');
+  }
+
+  /**
+   * Listener: Scroll del mouse con Ctrl presionado para zoom.
+   *
+   * COMPORTAMIENTO:
+   * - Ctrl + Scroll Up: Zoom In
+   * - Ctrl + Scroll Down: Zoom Out
+   */
+  @HostListener('wheel', ['$event'])
+  onWheel(event: WheelEvent): void {
+    if (event.ctrlKey) {
+      event.preventDefault();
+      if (event.deltaY < 0) {
+        this.zoomIn();
+      } else {
+        this.zoomOut();
+      }
+    }
+  }
+
+  /**
+   * Centrar el canvas en el origen (0, 0).
    *
    * PROPÓSITO:
-   * Convertir tipos internos a nombres mostrados en la UI.
+   * Proporcionar un botón "Home" que permita al usuario volver rápidamente
+   * al punto de origen del canvas donde se crean los elementos por defecto.
+   *
+   * COMPORTAMIENTO:
+   * 1. Calcula el centro del viewport del navegador
+   * 2. Ajusta panOffsetX y panOffsetY para que el punto (0,0) del canvas
+   *    quede centrado en la pantalla
+   * 3. Dispara detección de cambios para actualizar la vista
+   *
+   * CÁLCULO:
+   * Para centrar el origen en la pantalla:
+   * - panOffsetX = mitad del ancho del viewport
+   * - panOffsetY = mitad del alto del viewport
+   *
+   * EJEMPLO:
+   * Si el viewport es 1920x1080:
+   * - panOffsetX = 960px
+   * - panOffsetY = 540px
+   * Esto hace que el punto (0,0) del canvas aparezca en el centro de la pantalla.
+   *
+   * USO:
+   * Se llama desde el botón "Home" en la UI o al cargar el dashboard por primera vez.
+   */
+  centerOnOrigin(): void {
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    // Centrar el origen (0,0) en el viewport
+    // Restamos la mitad del ancho de la sidebar (aprox 250px) y header (64px)
+    this.panOffsetX = (viewportWidth - 250) / 2;
+    this.panOffsetY = (viewportHeight - 64) / 2;
+
+    console.log('[Dashboard] Canvas centrado en origen (0,0)');
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Obtener coordenada X actual del centro de la vista.
+   *
+   * PROPÓSITO:
+   * Calcular qué coordenada X del canvas está actualmente en el centro del viewport.
+   *
+   * CÁLCULO:
+   * El centro del viewport menos el offset de pan nos da la coordenada del canvas.
+   * Se tiene en cuenta el ancho de la sidebar (250px).
+   *
+   * RETORNO:
+   * Coordenada X del canvas que está en el centro de la vista, redondeada.
+   */
+  getCurrentViewX(): number {
+    const viewportWidth = window.innerWidth;
+    const centerViewportX = (viewportWidth - 250) / 2;
+    return Math.round(centerViewportX - this.panOffsetX);
+  }
+
+  /**
+   * Obtener coordenada Y actual del centro de la vista.
+   *
+   * PROPÓSITO:
+   * Calcular qué coordenada Y del canvas está actualmente en el centro del viewport.
+   *
+   * CÁLCULO:
+   * El centro del viewport menos el offset de pan nos da la coordenada del canvas.
+   * Se tiene en cuenta la altura del header (64px).
+   *
+   * RETORNO:
+   * Coordenada Y del canvas que está en el centro de la vista, redondeada.
+   */
+  getCurrentViewY(): number {
+    const viewportHeight = window.innerHeight;
+    const centerViewportY = (viewportHeight - 64) / 2;
+    return Math.round(centerViewportY - this.panOffsetY);
+  }
+
+  /**
+   * Navegar a una posición específica del canvas.
+   *
+   * PROPÓSITO:
+   * Centrar la vista del canvas en las coordenadas especificadas (x, y).
+   * Útil para hacer "zoom to" sobre un elemento específico al hacer click
+   * en su nombre desde un panel lateral.
+   *
+   * COMPORTAMIENTO:
+   * 1. Calcula el centro del viewport
+   * 2. Ajusta panOffsetX y panOffsetY para que el punto (x, y) del canvas
+   *    aparezca centrado en la pantalla
+   * 3. Aplica los límites del canvas para evitar posiciones fuera de rango
+   * 4. Dispara detección de cambios
+   *
+   * CÁLCULO:
+   * Para centrar el punto (x,y) en la pantalla:
+   * - panOffsetX = (ancho_viewport / 2) - (x * zoom)
+   * - panOffsetY = (alto_viewport / 2) - (y * zoom)
+   *
+   * EJEMPLO:
+   * navigateToPosition(200, 300) → Centra la vista en la coordenada (200, 300)
+   *
+   * @param x Coordenada X del canvas a centrar
+   * @param y Coordenada Y del canvas a centrar
+   */
+  navigateToPosition(x: number, y: number): void {
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    // Calcular el centro del viewport (considerando sidebar y header)
+    const centerViewportX = (viewportWidth - 250) / 2;
+    const centerViewportY = (viewportHeight - 64) / 2;
+
+    // Calcular el pan necesario para centrar el punto (x,y)
+    // Fórmula: panOffset = centroViewport - (coordenadaCanvas * zoom)
+    let newPanX = centerViewportX - (x * this.zoomLevel);
+    let newPanY = centerViewportY - (y * this.zoomLevel);
+
+    // Aplicar límites del canvas
+    const limitX = this.MAX_CANVAS_X * this.zoomLevel;
+    const limitY = this.MAX_CANVAS_Y * this.zoomLevel;
+
+    newPanX = Math.max(-limitX, Math.min(limitX, newPanX));
+    newPanY = Math.max(-limitY, Math.min(limitY, newPanY));
+
+    this.panOffsetX = newPanX;
+    this.panOffsetY = newPanY;
+
+    console.log(`[Dashboard] Navegando a posición (${x}, ${y})`);
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Utilidad: Mapear tipos de componentes a etiquetas legibles
+   *
+   * PROPÓSITO:
+   * Convertir tipos internos de componentes a nombres amigables para mostrar en la UI.
    *
    * MAPEO:
    * - 'decision-gateway' → 'Decisión'
@@ -819,7 +1085,7 @@ export class Dashboard implements OnInit, OnDestroy {
    * USO:
    * Principalmente para mostrar etiquetas en el menú lateral y tooltips.
    */
-  getComponentLabel(type: string): string {
+  public getComponentLabel(type: string): string {
     const labels: Record<string, string> = {
       'decision-gateway': 'Decisión',
       'parallel-gateway': 'Paralelo',
@@ -831,21 +1097,18 @@ export class Dashboard implements OnInit, OnDestroy {
   }
 
   /**
-   * CICLO DE VIDA - ngOnInit
+   * FLUJO DE INICIALIZACIÓN
    *
-   * Inicializa las suscripciones reactivas y restaura el estado del proceso activo.
-   *
-   * ORDEN DE INICIALIZACIÓN:
    * 1. Restaurar proceso activo desde localStorage
    * 2. Suscribirse a cambios del proceso activo
    * 3. Suscribirse a streams de gateways, activities y edges
    *
    * RESTAURACIÓN DEL PROCESO:
-   * activeProcessService.restoreActiveProcess() lee el ID desde localStorage
-   * y lo publica en el Observable activeProcessId$.
+   * activeProcessService.restoreActiveProcess() lee el proceso desde localStorage
+   * y lo publica en el Observable currentProcess$.
    *
    * SUSCRIPCIÓN AL PROCESO:
-   * Mantiene sincronizado currentProcessId con el servicio.
+   * Mantiene sincronizados currentProcessId y currentProcessName con el servicio.
    * Al cambiar el proceso, se dispara detectChanges() para actualizar la UI.
    *
    * SUSCRIPCIONES A STREAMS:
@@ -858,17 +1121,30 @@ export class Dashboard implements OnInit, OnDestroy {
    * no es necesario llamar .list() explícitamente.
    */
   ngOnInit(): void {
-    // Proceso activo
-    this.activeProcessService.restoreActiveProcess();
-    this.processSubscription = this.activeProcessService.activeProcessId$.subscribe((pid) => {
-      this.currentProcessId = pid ?? null;
-      this.cdr.detectChanges();
-    });
+    // Centrar canvas en el origen (0,0) al iniciar
+    this.centerOnOrigin();
 
     // Streams reactivos (se cargan automáticamente desde el store en memoria)
     this.subscribeGatewaysStream();
     this.subscribeActivitiesStream();
     this.subscribeEdgesStream();
+
+    // Proceso activo - restaurar y suscribirse
+    this.activeProcessService.restoreActiveProcess();
+    this.processSubscription = this.activeProcessService.currentProcess$.subscribe((process) => {
+      const previousProcessId = this.currentProcessId;
+      this.currentProcessId = process?.id ?? null;
+      this.currentProcessName = process?.name ?? null;
+      console.log(`[Dashboard] Proceso activo cambió: ${process?.name ?? 'ninguno'} (ID: ${process?.id ?? 'null'})`);
+
+      // Si el proceso activo cambió (no es la inicialización), refrescar las capas
+      if (previousProcessId !== this.currentProcessId && previousProcessId !== null) {
+        console.log('[Dashboard] Refrescando elementos del nuevo proceso...');
+        this.refreshAllLayers();
+      }
+
+      this.cdr.detectChanges();
+    });
   }
 
   /**
@@ -1012,28 +1288,39 @@ export class Dashboard implements OnInit, OnDestroy {
   private subscribeGatewaysStream(): void {
     this.gatewayService.list$.subscribe((gateways: Gateway[]) => {
       console.log('[Dashboard] subscribeGatewaysStream recibió:', gateways);
+      console.log('[Dashboard] Proceso activo actual:', this.currentProcessId);
 
-      // Filtrar solo activos
-      const activeGateways = gateways.filter(g => g.status === 'active' && g.id);
-      console.log('[Dashboard] Gateways activos:', activeGateways);
+      // DEBUG: Mostrar processId de cada gateway
+      gateways.forEach(g => {
+        console.log(`[Dashboard] Gateway ${g.id}: status="${g.status}", processId=${g.processId}, type="${g.type}"`);
+      });
 
-      // Convertir a BoardComponents
-      const gwLayer: BoardComponent[] = activeGateways.map(g => ({
-        id: `gateway-${g.id}`,
-        type: g.type,
-        category: 'gateway',
-        x: g.x ?? 100,
-        y: g.y ?? 100,
-        label: this.getComponentLabel(g.type),
-        gatewayId: g.id,
-      }));
+      // Diferir la actualización para evitar ExpressionChangedAfterItHasBeenCheckedError
+      setTimeout(() => {
+        // Filtrar por: activos, con ID, y que pertenezcan al proceso activo
+        const activeGateways = gateways.filter(g =>
+          g.status === 'active' &&
+          g.id != null &&
+          (this.currentProcessId == null || g.processId === this.currentProcessId)
+        );
+        console.log('[Dashboard] Gateways del proceso activo:', activeGateways);
 
-      // Reemplazar solo la capa de gateways, mantener activities/edges
-      const nonGateways = this.boardComponents.filter(c => c.category !== 'gateway');
-      this.boardComponents = [...gwLayer, ...nonGateways];
-      console.log('[Dashboard] boardComponents actualizado:', this.boardComponents);
+        // Convertir a BoardComponents
+        const gwLayer: BoardComponent[] = activeGateways.map(g => ({
+          id: `gateway-${g.id}`,
+          type: g.type,
+          category: 'gateway',
+          x: g.x ?? 100,
+          y: g.y ?? 100,
+          label: this.getComponentLabel(g.type),
+          gatewayId: g.id,
+        }));
 
-      this.cdr.detectChanges();
+        // Reemplazar solo la capa de gateways, mantener activities/edges
+        const nonGateways = this.boardComponents.filter(c => c.category !== 'gateway');
+        this.boardComponents = [...gwLayer, ...nonGateways];
+        console.log('[Dashboard] boardComponents actualizado:', this.boardComponents);
+      }, 0);
     });
   }
 
@@ -1345,6 +1632,13 @@ export class Dashboard implements OnInit, OnDestroy {
       return;
     }
 
+    // visual inmediato SOLO si hay proceso activo
+    if (this.currentProcessId == null) {
+      console.error('[Dashboard] No hay proceso activo. No se puede crear elemento.');
+      alert('⚠️ Error: Debes seleccionar un proceso antes de crear elementos.\n\nUsa "My Processes" en el menú superior.');
+      return; // NO agregar a boardComponents
+    }
+
     const tempId = `temp-${Date.now()}-${Math.random()}`;
     const newComponent: BoardComponent = {
       id: tempId,
@@ -1355,7 +1649,6 @@ export class Dashboard implements OnInit, OnDestroy {
       label: this.getComponentLabel(type),
     };
 
-    // visual inmediato
     this.boardComponents.push(newComponent);
 
     if (category === 'gateway') {
@@ -1364,7 +1657,11 @@ export class Dashboard implements OnInit, OnDestroy {
         status: 'active',
         x: newComponent.x,
         y: newComponent.y,
+        processId: this.currentProcessId, // ✅ ASIGNAR PROCESO ACTIVO
       };
+
+      console.log('[Dashboard] Creando gateway con processId:', this.currentProcessId);
+
       this.gatewayService.create(gateway).subscribe({
         next: (saved: Gateway) => {
           const comp = this.boardComponents.find((c) => c.id === tempId);
@@ -1372,16 +1669,21 @@ export class Dashboard implements OnInit, OnDestroy {
             comp.gatewayId = saved.id;
             comp.id = `gateway-${saved.id}`;
           }
+          console.log('[Dashboard] Gateway creado exitosamente:', saved);
           this.cdr.detectChanges();
         },
         error: (err) => {
           console.error('[Dashboard] Error al crear gateway:', err);
+          // Remover el componente temporal en caso de error
+          this.boardComponents = this.boardComponents.filter(c => c.id !== tempId);
+          this.cdr.detectChanges();
         },
       });
       return;
     }
 
     if (category === 'activity') {
+
       const a: Activity = {
         name: 'Activity',
         description: '',
@@ -1390,7 +1692,11 @@ export class Dashboard implements OnInit, OnDestroy {
         width: 100,
         height: 60,
         status: 'active',
+        processId: this.currentProcessId, // ✅ ASIGNAR PROCESO ACTIVO
       };
+
+      console.log('[Dashboard] Creando activity con processId:', this.currentProcessId);
+
       const svc: any = this.activityService as any;
       if (typeof svc.create === 'function') svc.create(a);
       else if (typeof svc.add === 'function') svc.add(a);
@@ -1430,7 +1736,8 @@ export class Dashboard implements OnInit, OnDestroy {
       this.openInspector('edge');
       return;
     }
-    this.addComponentToBoard(data.type, data.category, 400, 300);
+    // Crear en el origen (0, 0) por defecto
+    this.addComponentToBoard(data.type, data.category, 0, 0);
     if (data.category === 'activity') this.openInspector('activity');
   }
 
@@ -1901,27 +2208,40 @@ export class Dashboard implements OnInit, OnDestroy {
 
     if (stream && typeof stream.subscribe === 'function') {
       stream.subscribe((acts: Activity[] = []) => {
-        this.activitiesCache = acts ?? [];
-        this.activitiesLayer = this.activitiesCache.map((a) => ({
-          id: `activity-${a.id ?? `local-${this.hash()}`}`,
-          type: 'task-user',
-          category: 'activity',
-          x: a.x ?? 400,
-          y: a.y ?? 300,
-          width: a.width ?? 100,
-          height: a.height ?? 60,
-          label: a.name ?? 'Activity',
-          activityId: a.id,
-        }));
+        console.log('[Dashboard] subscribeActivitiesStream recibió:', acts);
+        console.log('[Dashboard] Proceso activo actual:', this.currentProcessId);
 
-        const ids = this.activitiesCache.map((a) => a.id).filter((id): id is number => id != null);
-        const newId = ids.find((id) => !this.seenActivityIds.has(id));
-        this.seenActivityIds = new Set(ids);
-        if (newId != null && this.inspectorOpen && this.inspectorKind === 'activity') {
-          this.selectedActivityId = newId;
-        }
+        // Diferir la actualización para evitar ExpressionChangedAfterItHasBeenCheckedError
+        setTimeout(() => {
+          // Filtrar por proceso activo
+          const filteredActivities = this.currentProcessId != null
+            ? acts.filter(a => a.processId === this.currentProcessId)
+            : acts;
 
-        this.recomputeBoardIncludeCurrentGateways();
+          console.log('[Dashboard] Activities del proceso activo:', filteredActivities);
+
+          this.activitiesCache = filteredActivities ?? [];
+          this.activitiesLayer = this.activitiesCache.map((a) => ({
+            id: `activity-${a.id ?? `local-${this.hash()}`}`,
+            type: 'task-user',
+            category: 'activity',
+            x: a.x ?? 0,
+            y: a.y ?? 0,
+            width: a.width ?? 100,
+            height: a.height ?? 60,
+            label: a.name ?? 'Activity',
+            activityId: a.id,
+          }));
+
+          const ids = this.activitiesCache.map((a) => a.id).filter((id): id is number => id != null);
+          const newId = ids.find((id) => !this.seenActivityIds.has(id));
+          this.seenActivityIds = new Set(ids);
+          if (newId != null && this.inspectorOpen && this.inspectorKind === 'activity') {
+            this.selectedActivityId = newId;
+          }
+
+          this.recomputeBoardIncludeCurrentGateways();
+        }, 0);
       });
     } else {
       console.warn('[Dashboard] No encontré stream de Activities. ¿items$ / list() / getAll() / getActivities()?');
@@ -2003,37 +2323,153 @@ export class Dashboard implements OnInit, OnDestroy {
 
     if (stream && typeof stream.subscribe === 'function') {
       stream.subscribe((eds: Edge[] = []) => {
-        this.edgesCache = eds ?? [];
+        console.log('[Dashboard] subscribeEdgesStream recibió:', eds);
+        console.log('[Dashboard] Proceso activo actual:', this.currentProcessId);
 
-        // NO dibujar “pelotica verde”: solo una entrada para que el SVG trace la línea.
-        this.edgesLayer = this.edgesCache.map((e) => {
-          const src = (e as any).activitySourceId ?? (e as any).fromId;
-          const dst = (e as any).activityDestinyId ?? (e as any).toId;
-          return {
-            id: `edge-${e.id ?? `local-${this.hash()}`}`,
-            type: 'edge-line', // distinto a 'event-start' para que el HTML no dibuje círculo
-            category: 'edge',
-            x: 0,
-            y: 0,
-            label: e.label ?? 'Edge',
-            edgeId: e.id,
-            fromId: src,
-            toId: dst,
-          };
-        });
+        // Diferir la actualización para evitar ExpressionChangedAfterItHasBeenCheckedError
+        setTimeout(() => {
+          // Filtrar por proceso activo
+          const filteredEdges = this.currentProcessId != null
+            ? eds.filter(e => e.processId === this.currentProcessId)
+            : eds;
 
-        const ids = this.edgesCache.map((e) => e.id).filter((id): id is number => id != null);
-        const newId = ids.find((id) => !this.seenEdgeIds.has(id));
-        this.seenEdgeIds = new Set(ids);
-        if (newId != null && this.inspectorOpen && this.inspectorKind === 'edge') {
-          this.selectedEdgeId = newId;
-        }
+          console.log('[Dashboard] Edges del proceso activo:', filteredEdges);
 
-        this.recomputeBoardIncludeCurrentGateways();
+          this.edgesCache = filteredEdges ?? [];
+
+          // NO dibujar "pelotica verde": solo una entrada para que el SVG trace la línea.
+          this.edgesLayer = this.edgesCache.map((e) => {
+            const src = (e as any).activitySourceId ?? (e as any).fromId;
+            const dst = (e as any).activityDestinyId ?? (e as any).toId;
+            return {
+              id: `edge-${e.id ?? `local-${this.hash()}`}`,
+              type: 'edge-line',
+              category: 'edge',
+              x: 0,
+              y: 0,
+              label: e.label ?? 'Edge',
+              edgeId: e.id,
+              fromId: src,
+              toId: dst,
+            };
+          });
+
+          const ids = this.edgesCache.map((e) => e.id).filter((id): id is number => id != null);
+          const newId = ids.find((id) => !this.seenEdgeIds.has(id));
+          this.seenEdgeIds = new Set(ids);
+          if (newId != null && this.inspectorOpen && this.inspectorKind === 'edge') {
+            this.selectedEdgeId = newId;
+          }
+
+          this.recomputeBoardIncludeCurrentGateways();
+        }, 0);
       });
     } else {
       console.warn('[Dashboard] No encontré stream de Edges. ¿items$ / list() / getAll() / getEdges()?');
     }
+  }
+
+  /**
+   * MÉTODOS AUXILIARES DE ACTUALIZACIÓN Y RECOMPUTE
+   *
+   * Conjunto de helpers para actualizar posiciones de elementos y recalcular
+   * el array unificado boardComponents que se renderiza en el canvas.
+   */
+
+  /**
+   * Refrescar todas las capas con el proceso activo actual.
+   *
+   * PROPÓSITO:
+   * Forzar el refiltrado de gateways, activities y edges cuando cambia el proceso activo.
+   *
+   * FLUJO:
+   * 1. Obtener snapshots actuales de los tres servicios
+   * 2. Filtrar por currentProcessId
+   * 3. Regenerar las tres capas (gateways, activities, edges)
+   * 4. Recomputar boardComponents
+   *
+   * USO:
+   * Se llama desde ngOnInit cuando detecta que currentProcessId cambió
+   * para actualizar inmediatamente el canvas con los elementos del nuevo proceso.
+   */
+  private refreshAllLayers(): void {
+    // Gateways
+    const allGateways = this.gatewayService.getCurrentSnapshot();
+    const activeGateways = allGateways.filter(g =>
+      g.status === 'active' &&
+      g.id != null &&
+      (this.currentProcessId == null || g.processId === this.currentProcessId)
+    );
+    const gwLayer: BoardComponent[] = activeGateways.map(g => ({
+      id: `gateway-${g.id}`,
+      type: g.type,
+      category: 'gateway',
+      x: g.x ?? 100,
+      y: g.y ?? 100,
+      label: this.getComponentLabel(g.type),
+      gatewayId: g.id,
+    }));
+
+    // Activities
+    const svcActivity: any = this.activityService as any;
+    let allActivities: Activity[] = [];
+    if (typeof svcActivity.getCurrentSnapshot === 'function') {
+      allActivities = svcActivity.getCurrentSnapshot();
+    } else if (svcActivity.store && typeof svcActivity.store.value !== 'undefined') {
+      allActivities = svcActivity.store.value;
+    }
+
+    const filteredActivities = this.currentProcessId != null
+      ? allActivities.filter(a => a.processId === this.currentProcessId)
+      : allActivities;
+
+    this.activitiesCache = filteredActivities;
+    this.activitiesLayer = this.activitiesCache.map((a) => ({
+      id: `activity-${a.id ?? `local-${this.hash()}`}`,
+      type: 'task-user',
+      category: 'activity',
+      x: a.x ?? 0,
+      y: a.y ?? 0,
+      width: a.width ?? 100,
+      height: a.height ?? 60,
+      label: a.name ?? 'Activity',
+      activityId: a.id,
+    }));
+
+    // Edges
+    const svcEdge: any = this.edgeService as any;
+    let allEdges: Edge[] = [];
+    if (typeof svcEdge.getCurrentSnapshot === 'function') {
+      allEdges = svcEdge.getCurrentSnapshot();
+    } else if (svcEdge.store && typeof svcEdge.store.value !== 'undefined') {
+      allEdges = svcEdge.store.value;
+    }
+
+    const filteredEdges = this.currentProcessId != null
+      ? allEdges.filter(e => e.processId === this.currentProcessId)
+      : allEdges;
+
+    this.edgesCache = filteredEdges;
+    this.edgesLayer = this.edgesCache.map((e) => {
+      const src = (e as any).activitySourceId ?? (e as any).fromId;
+      const dst = (e as any).activityDestinyId ?? (e as any).toId;
+      return {
+        id: `edge-${e.id ?? `local-${this.hash()}`}`,
+        type: 'edge-line',
+        category: 'edge',
+        x: 0,
+        y: 0,
+        label: e.label ?? 'Edge',
+        edgeId: e.id,
+        fromId: src,
+        toId: dst,
+      };
+    });
+
+    // Recomputar board
+    this.boardComponents = [...gwLayer, ...this.activitiesLayer, ...this.edgesLayer];
+    console.log('[Dashboard] Capas refrescadas:', this.boardComponents);
+    this.cdr.detectChanges();
   }
 
   /**

@@ -1,11 +1,21 @@
 <ul class="space-y-3">
-  <li *ngFor="let process of processes" 
-      class="flex flex-col p-4 bg-gray-50 rounded-lg shadow-sm hover:bg-gray-100 transition cursor-pointer"
-      (click)="selectProcess(process.id)">
-    
+  <li *ngFor="let process of processes"
+      class="flex flex-col p-4 rounded-lg shadow-sm transition cursor-pointer"
+      [class.bg-blue-50]="getActiveProcessId() === process.id"
+      [class.bg-gray-50]="getActiveProcessId() !== process.id"
+      [class.hover:bg-blue-100]="getActiveProcessId() === process.id"
+      [class.hover:bg-gray-100]="getActiveProcessId() !== process.id"
+      (click)="selectProcess(process)">
+
     <!-- Contenido -->
     <div class="flex justify-between items-center">
-      <span class="text-gray-800 font-semibold">{{ process.name }}</span>
+      <div class="flex items-center gap-2">
+        <span class="text-gray-800 font-semibold">{{ process.name }}</span>
+        <span *ngIf="getActiveProcessId() === process.id"
+              class="px-2 py-0.5 text-xs font-medium text-blue-700 bg-blue-200 rounded-full">
+          Activo
+        </span>
+      </div>
       <div class="flex space-x-2">
         <!-- Editar -->
         <button class="p-1 rounded-full hover:bg-blue-100">
@@ -14,7 +24,7 @@
           </svg>
         </button>
         <!-- Eliminar -->
-        <button class="p-1 rounded-full hover:bg-red-100" (click)="onDelete.emit(process.id)">
+        <button class="p-1 rounded-full hover:bg-red-100" (click)="$event.stopPropagation(); onDelete.emit(process.id)">
           <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>

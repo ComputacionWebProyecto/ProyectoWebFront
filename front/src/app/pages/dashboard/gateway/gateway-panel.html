@@ -69,8 +69,12 @@
       <div class="item-main">
         <strong class="block truncate">#{{ g.id }} — {{ getGatewayLabel(g.type) }}</strong>
         <span class="muted">&nbsp;({{ g.status }})</span>
+        <span class="muted text-xs" *ngIf="g.x != null && g.y != null">
+          &nbsp;📍 ({{ g.x }}, {{ g.y }})
+        </span>
       </div>
       <div class="item-actions">
+        <button type="button" (click)="navigateToGateway(g)" title="Ir a posición">🧭</button>
         <button type="button" (click)="edit(g)">Editar</button>
         <button type="button" (click)="remove(g.id)">Eliminar</button>
       </div>

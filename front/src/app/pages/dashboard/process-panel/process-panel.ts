@@ -5,7 +5,7 @@ import { Process } from '../../../models/Process';
 import { ProcessList } from '../process-list/process-list';
 import { ProcessForm } from '../process-form/process-form';
 import { AuthService } from '../../../services/auth.service';
-import { ActiveProcessService } from '../../../services/active-process.service';
+import { ActiveProcessService, ProcessModel } from '../../../services/active-process.service';
 import { BackendProcessResponse } from '../../../models/BackendProcessResponse';
 
 
@@ -60,11 +60,25 @@ export class ProcessPanel implements OnInit {
     this.isCreating = false;
   }
 
+  /**
+   * Guarda un nuevo proceso en el backend y lo selecciona automáticamente.
+   *
+   * FLUJO:
+   * 1. Obtiene el companyId del usuario autenticado
+   * 2. Crea el proceso en el backend via ProcessService
+   * 3. Convierte la respuesta del backend a ProcessModel
+   * 4. Establece el proceso recién creado como activo
+   * 5. Recarga la lista de procesos
+   *
+   * CONVERSIÓN A ProcessModel:
+   * La respuesta del backend puede tener formato diferente (BackendProcessResponse)
+   * por lo que se mapea explícitamente a ProcessModel para el servicio.
+   */
   saveProcess(newProcess: Process) {
     const user = this.authService.getUser();
     console.log('Datos usuario:', user);
 
-    // Obtener companyId del usuario
+    // Obtener companyId del usuario (soporta ambos formatos)
     const companyId = (user as any)?.companyId ?? (user as any)?.company?.id;
 
     if (!companyId) {
@@ -80,10 +94,17 @@ export class ProcessPanel implements OnInit {
       next: (created) => {
         this.isCreating = false;
         this.loadProcesses();
-        // Seleccionar automáticamente el proceso recién creado
-        if (created?.id) {
-          this.activeProcessService.setActiveProcess(created.id);
-          console.log('✅ Proceso creado y seleccionado automáticamente:', created.id);
+
+        // Seleccionar automáticamente el proceso recién creado como activo
+        if (created?.id && created?.name) {
+          const processModel: ProcessModel = {
+            id: created.id,
+            name: created.name,
+            description: created.description,
+            companyId: created.companyId
+          };
+          this.activeProcessService.setActiveProcess(processModel);
+          console.log('✅ Proceso creado y seleccionado automáticamente:', processModel);
         }
       },
       error: (err) => console.error('Error creating process', err)

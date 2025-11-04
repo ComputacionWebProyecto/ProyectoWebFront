@@ -87,6 +87,14 @@ export class ActivityPanel implements OnInit, OnChanges, OnDestroy {
   @Input() activityId: number | null = null;
 
   /**
+   * OUTPUT: navigateTo
+   *
+   * Emite coordenadas (x, y) para solicitar al Dashboard que navegue a esa posición.
+   * Se usa cuando el usuario hace click en una activity del listado para ir a su ubicación.
+   */
+  @Output() navigateTo = new EventEmitter<{x: number, y: number}>();
+
+  /**
    * OUTPUT: close
    *
    * Evento emitido cuando el usuario hace clic en el botón de cerrar (X).
@@ -157,8 +165,8 @@ export class ActivityPanel implements OnInit, OnChanges, OnDestroy {
       validators: [Validators.required, Validators.minLength(2)],
     }),
     description: this.fb.control('', { nonNullable: true }),
-    x: this.fb.control(100, { nonNullable: true }),
-    y: this.fb.control(100, { nonNullable: true }),
+    x: this.fb.control(0, { nonNullable: true }),
+    y: this.fb.control(0, { nonNullable: true }),
     width: this.fb.control(140, { nonNullable: true }),
     height: this.fb.control(80, { nonNullable: true }),
     processId: this.fb.control<number | undefined>(undefined, { nonNullable: true }),
@@ -421,6 +429,19 @@ export class ActivityPanel implements OnInit, OnChanges, OnDestroy {
     if (!current || !this.form.valid) return;
 
     const raw = this.form.getRawValue();
+
+    // Obtener processId: prioridad formulario > current > proceso activo
+    let processId = raw.processId ?? current.processId;
+    if (!processId) {
+      const activeId = this.activeProcessService.getActiveProcessId();
+      processId = activeId ?? undefined;
+      if (!processId) {
+        console.error('❌ No hay processId disponible para actualizar');
+        alert('⚠️ Error: No se pudo determinar el proceso de la activity.\n\nSelecciona un proceso desde "My Processes".');
+        return;
+      }
+    }
+
     const merged: Activity = {
       ...current,
       name: raw.name,
@@ -429,9 +450,17 @@ export class ActivityPanel implements OnInit, OnChanges, OnDestroy {
       y: raw.y,
       width: raw.width,
       height: raw.height,
-      processId: raw.processId,
-      roleId: raw.roleId,
+      processId: processId,  // ✅ Ahora siempre tiene valor
+      roleId: raw.roleId ?? current.roleId,
     };
+
+    console.log('🔄 Actualizando activity:', merged);
+    console.log('   ID:', merged.id);
+    console.log('   Name:', merged.name);
+    console.log('   Position:', `(${merged.x}, ${merged.y})`);
+    console.log('   Size:', `${merged.width}x${merged.height}`);
+    console.log('   ProcessId:', merged.processId);
+    console.log('   RoleId:', merged.roleId);
 
     this.service.update(merged).subscribe({
       next: (updated) => {
@@ -440,6 +469,8 @@ export class ActivityPanel implements OnInit, OnChanges, OnDestroy {
       },
       error: (err) => {
         console.error('❌ Error actualizando activity:', err);
+        console.error('   Payload enviado:', merged);
+        console.error('   Error details:', err.error);
         alert('Error al actualizar activity. Verifica la consola para más detalles.');
       }
     });
@@ -565,5 +596,26 @@ export class ActivityPanel implements OnInit, OnChanges, OnDestroy {
       processId: undefined,
       roleId: undefined,
     });
+  }
+
+  /**
+   * Navega a la posición de una activity en el canvas.
+   *
+   * PROPÓSITO:
+   * Permite al usuario hacer click en una activity del listado y
+   * automáticamente centrar la vista del canvas en su ubicación.
+   *
+   * COMPORTAMIENTO:
+   * 1. Emite evento navigateTo con las coordenadas (x, y) de la activity
+   * 2. El Dashboard escucha este evento y llama a navigateToPosition(x, y)
+   * 3. El canvas se centra en la posición de la activity
+   *
+   * @param activity Activity a la que navegar
+   */
+  navigateToActivity(activity: Activity): void {
+    if (activity.x != null && activity.y != null) {
+      console.log(`🧭 Navegando a activity "${activity.name}" en (${activity.x}, ${activity.y})`);
+      this.navigateTo.emit({ x: activity.x, y: activity.y });
+    }
   }
 }

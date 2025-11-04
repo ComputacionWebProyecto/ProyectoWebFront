@@ -1,9 +1,9 @@
 <ul class="space-y-3">
-  <li *ngFor="let user of users" 
+  <li *ngFor="let user of users"
       class="flex flex-col p-4 bg-gray-50 rounded-lg shadow-sm hover:bg-gray-100 transition">
-    
+
     <div class="flex justify-between items-center">
-      <span class="text-gray-800 font-semibold">{{ user.nombre }}</span>
+      <span class="text-gray-800 font-semibold">{{ user?.nombre || 'Sin nombre' }}</span>
       <div class="flex space-x-2">
         <button class="p-1 rounded-full hover:bg-blue-100" (click)="onEdit.emit(user)">
           <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -18,7 +18,7 @@
       </div>
     </div>
 
-    <p class="text-sm text-gray-600 mt-1">{{ user.correo }}</p>
-    <p class="text-sm text-gray-600 mt-1">{{ user.role.nombre }}</p>
+    <p class="text-sm text-gray-600 mt-1">{{ user?.correo || 'Sin correo' }}</p>
+    <p class="text-sm text-gray-600 mt-1">Rol: {{ user?.role?.nombre || 'Sin rol asignado' }}</p>
   </li>
 </ul>

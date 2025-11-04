@@ -115,6 +115,14 @@ export class GatewayPanel implements OnInit, OnChanges, OnDestroy {
   @Output() close = new EventEmitter<void>();
 
   /**
+   * OUTPUT: navigateTo
+   *
+   * Emite coordenadas (x, y) para solicitar al Dashboard que navegue a esa posición.
+   * Se usa cuando el usuario hace click en un gateway del listado para ir a su ubicación.
+   */
+  @Output() navigateTo = new EventEmitter<{x: number, y: number}>();
+
+  /**
    * INYECCIÓN DE DEPENDENCIAS
    *
    * - FormBuilder: Constructor de formularios reactivos
@@ -686,4 +694,20 @@ export class GatewayPanel implements OnInit, OnChanges, OnDestroy {
    * es menos eficiente.
    */
   trackById = (_: number, g: Gateway) => g.id ?? _;
+
+  /**
+   * Navega a la posición de un gateway en el canvas.
+   *
+   * PROPÓSITO:
+   * Permite al usuario hacer click en un gateway del listado y
+   * automáticamente centrar la vista del canvas en su ubicación.
+   *
+   * @param gateway Gateway al que navegar
+   */
+  navigateToGateway(gateway: any): void {
+    if (gateway.x != null && gateway.y != null) {
+      console.log(`🧭 Navegando a gateway tipo "${gateway.type}" en (${gateway.x}, ${gateway.y})`);
+      this.navigateTo.emit({ x: gateway.x, y: gateway.y });
+    }
+  }
 }
