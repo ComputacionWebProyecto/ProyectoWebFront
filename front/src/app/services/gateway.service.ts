@@ -135,6 +135,19 @@ export class GatewayService {
   }
 
   /**
+   * Obtener snapshot actual del store.
+   *
+   * PROPÓSITO:
+   * Acceder sincrónicamente al estado actual de los gateways sin suscribirse.
+   *
+   * RETORNO:
+   * Array con todos los gateways actualmente en el store.
+   */
+  getCurrentSnapshot(): Gateway[] {
+    return this.store.value;
+  }
+
+  /**
    * Métodos de creación que permiten agregar nuevos gateways al sistema.
    * Los gateways se envían al backend para persistencia y el store local
    * se actualiza automáticamente con la respuesta.
@@ -312,19 +325,5 @@ export class GatewayService {
       next: () => console.log('[GatewayService] Gateways loaded from backend'),
       error: (err) => console.error('[GatewayService] Error loading gateways:', err)
     });
-  }
-
-  /**
-   * Método auxiliar para obtener snapshot síncrono del estado actual.
-   *
-   * Retorna el valor actual del store sin envolverlo en Observable. Este método
-   * es útil para operaciones internas que necesitan acceso inmediato al estado
-   * sin reactividad.
-   *
-   * Advertencia: Este método no notifica cambios posteriores. Para reactividad,
-   * los componentes deben usar list$ en su lugar.
-   */
-  getCurrentSnapshot(): Gateway[] {
-    return this.store.value;
   }
 }

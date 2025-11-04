@@ -18,6 +18,17 @@
       (toggleRoles)="onToggleRoles()">
     </app-header-dashboard>
 
+    <!-- Banner de bienvenida -->
+    <app-welcome-banner
+      [hasProcess]="currentProcessId !== null"
+      [hasRole]="hasRole"
+      [processAlertDismissed]="processAlertDismissed"
+      (createProcess)="toggleProcessPanel()"
+      (createRole)="onToggleRoles()"
+      (dismissProcessBanner)="processAlertDismissed = true"
+      (dismissRoleBanner)="roleAlertDismissed = true">
+    </app-welcome-banner>
+
     <!-- Paneles laterales -->
     <app-user-panel [isOpen]="isUserPanelOpen"></app-user-panel>
     <app-process-panel [isOpen]="isProcessPanelOpen"></app-process-panel>

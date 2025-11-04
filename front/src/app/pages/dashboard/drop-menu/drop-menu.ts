@@ -3,6 +3,7 @@ import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../../services/auth.service';
 import { Router } from '@angular/router';
+import { ActiveProcessService } from '../../../services/active-process.service';
 
 type Category = 'gateway' | 'activity' | 'edge';
 
@@ -19,7 +20,11 @@ export class DropdownMenuComponent {
   /** Emite el tipo y la categoría para que el Dashboard cree el componente */
   @Output() componentSelected = new EventEmitter<{ type: string; category: Category }>();
 
-  constructor(private authService: AuthService, private router: Router) {}
+  constructor(
+    private authService: AuthService,
+    private router: Router,
+    private activeProcessService: ActiveProcessService
+  ) {}
 
   // Estado de submenús
   isGatewayOpen = false;
@@ -38,10 +43,17 @@ export class DropdownMenuComponent {
 
   /** Inicio de drag desde el menú (DnD hacia el tablero) */
   onDragStart(event: DragEvent, componentType: string, category: Category) {
-    // Para EDGE: NO permitir drag (evita “pelotica” y altas visuales)
+    // Para EDGE: NO permitir drag (evita "pelotica" y altas visuales)
     if (category === 'edge') {
       event.preventDefault();
       event.stopPropagation();
+      return;
+    }
+
+    // Validar que haya un proceso activo antes de permitir drag de gateway/activity
+    if ((category === 'gateway' || category === 'activity') && !this.activeProcessService.hasActiveProcess()) {
+      event.preventDefault();
+      alert('⚠️ Debes crear y seleccionar un proceso antes de agregar elementos al tablero.\n\nUsa "My Processes" en el menú superior.');
       return;
     }
 
@@ -73,6 +85,12 @@ export class DropdownMenuComponent {
 
   /** Click directo para añadir sin arrastrar */
   onSelectComponent(componentType: string, category: Category) {
+    // Validar que haya un proceso activo antes de permitir selección de gateway/activity
+    if ((category === 'gateway' || category === 'activity') && !this.activeProcessService.hasActiveProcess()) {
+      alert('⚠️ Debes crear y seleccionar un proceso antes de agregar elementos al tablero.\n\nUsa "My Processes" en el menú superior.');
+      return;
+    }
+
     // Para EDGE, el Dashboard solo abre el panel (sin insertar nodo)
     this.componentSelected.emit({ type: componentType, category });
   }

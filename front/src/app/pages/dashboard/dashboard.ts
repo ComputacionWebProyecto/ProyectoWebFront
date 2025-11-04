@@ -73,9 +73,12 @@ import { HeaderDashboard } from './header-dashboard/header-dashboard';
 import { ProcessPanel } from './process-panel/process-panel';
 import { UserPanel } from './user-panel/user-panel';
 import { RolePanel } from './role-panel/role-panel';
+import { WelcomeBanner } from './welcome-banner';
 
 import { GatewayService } from '../../services/gateway.service';
 import { ActiveProcessService } from '../../services/active-process.service';
+import { RoleService } from '../../services/role.service';
+import { AuthService } from '../../services/auth.service';
 
 import { Gateway } from '../../models/Gateway';
 import { Activity } from '../../models/Activity';
@@ -195,6 +198,7 @@ interface BoardComponent {
     ActivityPanel,
     EdgePanel,
     GatewayPanel,
+    WelcomeBanner,
   ],
   templateUrl: './dashboard.html',
   styleUrls: ['./dashboard.css'],
@@ -638,6 +642,30 @@ export class Dashboard implements OnInit, OnDestroy {
   isShiftPressed = false;
 
   /**
+   * BANNER DE BIENVENIDA
+   *
+   * Sistema para mostrar avisos contextuales cuando el usuario no tiene procesos o roles.
+   */
+
+  /**
+   * Indica si el usuario ha ocultado manualmente el banner de proceso.
+   * Se usa para no mostrar el banner repetidamente después de que el usuario lo cierre.
+   */
+  processAlertDismissed = false;
+
+  /**
+   * Indica si el usuario ha ocultado manualmente el banner de roles.
+   * Se usa para no mostrar el banner repetidamente después de que el usuario lo cierre.
+   */
+  roleAlertDismissed = false;
+
+  /**
+   * Indica si la compañía del usuario tiene al menos un rol.
+   * Se usa para mostrar/ocultar el banner de creación de roles.
+   */
+  hasRole = false;
+
+  /**
    * CONSTRUCTOR
    *
    * Inyecta las cuatro dependencias principales del Dashboard.
@@ -662,6 +690,8 @@ export class Dashboard implements OnInit, OnDestroy {
     private edgeService: EdgeService,
     private gatewayService: GatewayService,
     private activeProcessService: ActiveProcessService,
+    private roleService: RoleService,
+    private authService: AuthService,
     private cdr: ChangeDetectorRef
   ) {}
 
@@ -1124,6 +1154,9 @@ export class Dashboard implements OnInit, OnDestroy {
     // Centrar canvas en el origen (0,0) al iniciar
     this.centerOnOrigin();
 
+    // Verificar si la compañía tiene roles
+    this.checkIfCompanyHasRoles();
+
     // Streams reactivos (se cargan automáticamente desde el store en memoria)
     this.subscribeGatewaysStream();
     this.subscribeActivitiesStream();
@@ -1145,6 +1178,42 @@ export class Dashboard implements OnInit, OnDestroy {
 
       this.cdr.detectChanges();
     });
+  }
+
+  /**
+   * Verificar si la compañía del usuario tiene roles
+   *
+   * PROPÓSITO:
+   * Determinar si se debe mostrar el banner de creación de roles.
+   *
+   * FLUJO:
+   * 1. Obtener usuario autenticado del AuthService
+   * 2. Obtener ID de la compañía
+   * 3. Consultar roles de la compañía vía RoleService
+   * 4. Actualizar hasRole según el resultado
+   *
+   * USO:
+   * Se llama en ngOnInit para actualizar el estado inicial del banner de roles.
+   */
+  private checkIfCompanyHasRoles(): void {
+    const user = this.authService.getUser();
+    const companyId = user?.company?.id ?? (user as any)?.companyId;
+
+    if (companyId) {
+      this.roleService.getRolesByCompanyId(companyId).subscribe({
+        next: (roles) => {
+          this.hasRole = roles.length > 0;
+          console.log(`[Dashboard] La compañía tiene ${roles.length} roles`);
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          console.error('[Dashboard] Error al verificar roles:', err);
+          this.hasRole = false;
+        }
+      });
+    } else {
+      console.warn('[Dashboard] No se pudo obtener el ID de la compañía para verificar roles');
+    }
   }
 
   /**
@@ -1697,11 +1766,23 @@ export class Dashboard implements OnInit, OnDestroy {
 
       console.log('[Dashboard] Creando activity con processId:', this.currentProcessId);
 
-      const svc: any = this.activityService as any;
-      if (typeof svc.create === 'function') svc.create(a);
-      else if (typeof svc.add === 'function') svc.add(a);
-      else if (typeof svc.new === 'function') svc.new(a);
-      else console.warn('[Dashboard] ActivityService no expone create/add/new');
+      this.activityService.create(a).subscribe({
+        next: (saved: Activity) => {
+          const comp = this.boardComponents.find((c) => c.id === tempId);
+          if (comp && saved.id) {
+            comp.activityId = saved.id;
+            comp.id = `activity-${saved.id}`;
+          }
+          console.log('[Dashboard] Activity creado exitosamente:', saved);
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          console.error('[Dashboard] Error al crear activity:', err);
+          // Remover el componente temporal en caso de error
+          this.boardComponents = this.boardComponents.filter(c => c.id !== tempId);
+          this.cdr.detectChanges();
+        },
+      });
       return;
     }
   }
@@ -1801,17 +1882,36 @@ export class Dashboard implements OnInit, OnDestroy {
     }
 
     if (component?.category === 'activity' && component.activityId != null) {
-      const svc: any = this.activityService as any;
-      if (typeof svc.delete === 'function') svc.delete(component.activityId);
-      else if (typeof svc.remove === 'function') svc.remove(component.activityId);
-      else console.warn('[Dashboard] ActivityService no expone delete/remove');
-    } else if (component?.category === 'edge' && component.edgeId != null) {
-      const svc: any = this.edgeService as any;
-      if (typeof svc.delete === 'function') svc.delete(component.edgeId);
-      else if (typeof svc.remove === 'function') svc.remove(component.edgeId);
-      else console.warn('[Dashboard] EdgeService no expone delete/remove');
+      this.activityService.delete(component.activityId).subscribe({
+        next: () => {
+          console.log('[Dashboard] Activity eliminado exitosamente:', component.activityId);
+          this.boardComponents = this.boardComponents.filter((c) => c.id !== id);
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          console.error('[Dashboard] Error al eliminar activity:', error);
+          this.boardComponents = this.boardComponents.filter((c) => c.id !== id);
+        },
+      });
+      return;
     }
 
+    if (component?.category === 'edge' && component.edgeId != null) {
+      this.edgeService.delete(component.edgeId).subscribe({
+        next: () => {
+          console.log('[Dashboard] Edge eliminado exitosamente:', component.edgeId);
+          this.boardComponents = this.boardComponents.filter((c) => c.id !== id);
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          console.error('[Dashboard] Error al eliminar edge:', error);
+          this.boardComponents = this.boardComponents.filter((c) => c.id !== id);
+        },
+      });
+      return;
+    }
+
+    // Si no es ninguna categoría conocida, simplemente remover del boardComponents
     this.boardComponents = this.boardComponents.filter((c) => c.id !== id);
   }
 
@@ -2534,12 +2634,10 @@ export class Dashboard implements OnInit, OnDestroy {
       status: (current as any)?.status ?? 'active',
     };
 
-    const svc: any = this.activityService as any;
-    if (typeof svc.update === 'function') svc.update(updated);
-    else if (typeof svc.save === 'function') svc.save(updated);
-    else if (typeof svc.put === 'function') svc.put(updated);
-    else if (typeof svc.set === 'function') svc.set(updated);
-    else console.warn('[Dashboard] ActivityService no expone update/save/put/set');
+    this.activityService.update(updated).subscribe({
+      next: () => console.log('[Dashboard] Activity position updated'),
+      error: (e) => console.error('[Dashboard] Error updating activity position:', e),
+    });
   }
 
   /**

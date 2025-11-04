@@ -67,6 +67,10 @@ export class EdgeService {
     return this.http.get<Edge>(`${this.httpBaseUrl}/${id}`);
   }
 
+  getCurrentSnapshot(): Edge[] {
+    return this.store.value;
+  }
+
   private loadFromBackend(): void {
     this.http.get<Edge[]>(this.httpBaseUrl).pipe(
       tap(edges => this.store.next(edges))

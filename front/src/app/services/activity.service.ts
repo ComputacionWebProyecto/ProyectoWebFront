@@ -7,7 +7,7 @@ import { Activity } from '../models/Activity';
 
 /**
  * ActivityService - Integrado con Backend Spring Boot
- * 
+ *
  * Servicio que gestiona el estado y las operaciones CRUD de las actividades (Activity).
  * Conecta con el backend Spring Boot y mantiene un cache local reactivo mediante BehaviorSubject.
  */
@@ -69,6 +69,10 @@ export class ActivityService {
 
   getById(id: number): Observable<Activity> {
     return this.http.get<Activity>(`${this.httpBaseUrl}/${id}`);
+  }
+
+  getCurrentSnapshot(): Activity[] {
+    return this.store.value;
   }
 
   private loadFromBackend(): void {
