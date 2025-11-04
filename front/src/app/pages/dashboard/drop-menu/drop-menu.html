@@ -101,16 +101,15 @@
           *ngIf="isEventsOpen"
           class="ml-8 mt-2 space-y-1 border-l-2 border-gray-200 pl-3">
           <li>
+            <!--  Edge NO es draggable y al click solo abre el panel -->
             <button
               type="button"
-              draggable="true"
-              title="Arrastra al tablero o haz clic para crear"
-              (dragstart)="onDragStart($event, 'event-start', 'edge')"
-              (dragend)="onDragEnd($event)"
-              (click)="onSelectComponent('event-start', 'edge')"
-              class="w-full text-left flex items-center p-2 rounded-lg hover:bg-blue-50 transition-colors group cursor-move">
-              <div class="w-4 h-4 rounded-full border-2 border-green-500"></div>
-              <span class="ml-2 text-sm text-gray-700 group-hover:text-blue-600">Evento Inicio</span>
+              [attr.draggable]="false"
+              title="Abrir panel de Edge (no se arrastra)"
+              (click)="onSelectComponent('edge-line', 'edge')"
+              class="w-full text-left flex items-center p-2 rounded-lg hover:bg-blue-50 transition-colors group cursor-pointer">
+              <div class="w-4 h-4 border-2 border-gray-400"></div>
+              <span class="ml-2 text-sm text-gray-700 group-hover:text-blue-600">Conectar (abrir panel)</span>
             </button>
           </li>
         </ul>

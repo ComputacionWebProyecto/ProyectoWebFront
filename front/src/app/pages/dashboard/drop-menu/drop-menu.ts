@@ -38,6 +38,13 @@ export class DropdownMenuComponent {
 
   /** Inicio de drag desde el menú (DnD hacia el tablero) */
   onDragStart(event: DragEvent, componentType: string, category: Category) {
+    // Para EDGE: NO permitir drag (evita “pelotica” y altas visuales)
+    if (category === 'edge') {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
     if (!event.dataTransfer) return;
 
     event.dataTransfer.effectAllowed = 'copy';
@@ -66,6 +73,7 @@ export class DropdownMenuComponent {
 
   /** Click directo para añadir sin arrastrar */
   onSelectComponent(componentType: string, category: Category) {
+    // Para EDGE, el Dashboard solo abre el panel (sin insertar nodo)
     this.componentSelected.emit({ type: componentType, category });
   }
 
@@ -87,6 +95,7 @@ export class DropdownMenuComponent {
     }
     if (category === 'edge') {
       const map: Record<string, string> = {
+        'edge-line': 'Edge (conectar)',
         'event-start': 'Evento Inicio',
       };
       return map[type] ?? 'Edge';
