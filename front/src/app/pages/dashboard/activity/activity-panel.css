@@ -98,13 +98,41 @@
   background: #374151;
 }
 
-/* Lista */
+/* Lista con scroll */
 .list {
   list-style: none;
   padding: 0;
   margin: 16px 0 0 0;
   display: grid;
   gap: 8px;
+
+  /* Agregar scroll vertical cuando hay muchos elementos */
+  max-height: 400px;
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  /* Scrollbar personalizado para tema oscuro */
+  scrollbar-width: thin;
+  scrollbar-color: #afb1ee #1f2a44;
+}
+
+/* Scrollbar para navegadores Webkit (Chrome, Safari, Edge) */
+.list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.list::-webkit-scrollbar-track {
+  background: #1f2a44;
+  border-radius: 4px;
+}
+
+.list::-webkit-scrollbar-thumb {
+  background: #afb1ee;
+  border-radius: 4px;
+}
+
+.list::-webkit-scrollbar-thumb:hover {
+  background: #9194d8;
 }
 
 .list li {

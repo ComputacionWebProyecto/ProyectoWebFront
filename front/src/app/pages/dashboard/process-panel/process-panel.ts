@@ -1,26 +1,32 @@
 import { ChangeDetectorRef, Component, OnInit, Input } from '@angular/core';
-import { CommonModule } from '@angular/common'; // Para NgIf y NgFor
+import { CommonModule } from '@angular/common';
 import { ProcessService } from '../../../services/process.service';
 import { Process } from '../../../models/Process';
 import { ProcessList } from '../process-list/process-list';
 import { ProcessForm } from '../process-form/process-form';
 import { AuthService } from '../../../services/auth.service';
+import { ActiveProcessService } from '../../../services/active-process.service';
 import { BackendProcessResponse } from '../../../models/BackendProcessResponse';
 
 
 @Component({
   selector: 'app-process-panel',
   standalone: true,
-  imports: [CommonModule,ProcessList, ProcessForm],
+  imports: [CommonModule, ProcessList, ProcessForm],
   templateUrl: './process-panel.html',
   styleUrl: './process-panel.css'
 })
 export class ProcessPanel implements OnInit {
-  @Input() isOpen = false; 
+  @Input() isOpen = false;
   processes: BackendProcessResponse[] = [];
-  isCreating = false; // Formulario o lista
+  isCreating = false;
 
- constructor(private processService: ProcessService, private authService: AuthService, private cdr: ChangeDetectorRef) {}
+  constructor(
+    private processService: ProcessService,
+    private authService: AuthService,
+    private activeProcessService: ActiveProcessService,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit(): void {
     this.loadProcesses();
@@ -57,12 +63,28 @@ export class ProcessPanel implements OnInit {
   saveProcess(newProcess: Process) {
     const user = this.authService.getUser();
     console.log('Datos usuario:', user);
-    newProcess.companyId = user?.company.id;
+
+    // Obtener companyId del usuario
+    const companyId = (user as any)?.companyId ?? (user as any)?.company?.id;
+
+    if (!companyId) {
+      console.error('❌ No se pudo obtener companyId del usuario:', user);
+      alert('Error: No se pudo determinar la empresa del usuario.');
+      return;
+    }
+
+    newProcess.companyId = companyId;
     console.log('Proceso a crear:', newProcess);
+
     this.processService.createProcess(newProcess).subscribe({
-      next: () => {
+      next: (created) => {
         this.isCreating = false;
-        this.loadProcesses(); // recargar la lista
+        this.loadProcesses();
+        // Seleccionar automáticamente el proceso recién creado
+        if (created?.id) {
+          this.activeProcessService.setActiveProcess(created.id);
+          console.log('✅ Proceso creado y seleccionado automáticamente:', created.id);
+        }
       },
       error: (err) => console.error('Error creating process', err)
     });
