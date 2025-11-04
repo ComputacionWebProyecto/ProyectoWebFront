@@ -112,13 +112,41 @@
   background: #374151;
 }
 
-/* Lista de gateways */
+/* Lista de gateways con scroll */
 .list {
   list-style: none;
   padding: 0;
   margin: 16px 0 0 0;
   display: grid;
   gap: 8px;
+
+  /* Agregar scroll vertical cuando hay muchos elementos */
+  max-height: 400px;
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  /* Scrollbar personalizado para tema oscuro */
+  scrollbar-width: thin;
+  scrollbar-color: #bfdbfe #1e2f44;
+}
+
+/* Scrollbar para navegadores Webkit (Chrome, Safari, Edge) */
+.list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.list::-webkit-scrollbar-track {
+  background: #1e2f44;
+  border-radius: 4px;
+}
+
+.list::-webkit-scrollbar-thumb {
+  background: #bfdbfe;
+  border-radius: 4px;
+}
+
+.list::-webkit-scrollbar-thumb:hover {
+  background: #93c5fd;
 }
 
 .list li {
