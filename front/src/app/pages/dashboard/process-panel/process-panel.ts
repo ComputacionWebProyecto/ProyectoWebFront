@@ -68,7 +68,7 @@ export class ProcessPanel implements OnInit {
     const companyId = (user as any)?.companyId ?? (user as any)?.company?.id;
 
     if (!companyId) {
-      console.error('❌ No se pudo obtener companyId del usuario:', user);
+      console.error('No se pudo obtener companyId del usuario:', user);
       alert('Error: No se pudo determinar la empresa del usuario.');
       return;
     }

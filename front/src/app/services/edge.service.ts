@@ -34,7 +34,7 @@ export class EdgeService {
       tap(created => {
         const current = this.store.value;
         this.store.next([...current, created]);
-        console.log('✅ Edge creado:', created.id, created.label);
+        console.log('Edge creado:', created.id, created.label);
       })
     );
   }
@@ -58,7 +58,7 @@ export class EdgeService {
       tap(() => {
         const current = this.store.value;
         this.store.next(current.filter(e => e.id !== id));
-        console.log('✅ Edge eliminado:', id);
+        console.log('Edge eliminado:', id);
       })
     );
   }
