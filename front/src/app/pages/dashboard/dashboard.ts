@@ -612,7 +612,7 @@ export class Dashboard implements OnInit, OnDestroy {
     private gatewayService: GatewayService,
     private activeProcessService: ActiveProcessService,
     private cdr: ChangeDetectorRef
-  ) {}
+  ) { }
 
   /**
    * HOST LISTENERS - SISTEMA DE PAN Y NAVEGACIÓN
@@ -1010,30 +1010,40 @@ export class Dashboard implements OnInit, OnDestroy {
    * para debugging.
    */
   private subscribeGatewaysStream(): void {
-    this.gatewayService.list$.subscribe((gateways: Gateway[]) => {
-      console.log('[Dashboard] subscribeGatewaysStream recibió:', gateways);
+    // Suscribirse a cambios del proceso activo
+    this.processSubscription = this.activeProcessService.activeProcessId$.subscribe(processId => {
+      if (processId === null) {
+        // No hay proceso activo, limpiar gateways
+        const nonGateways = this.boardComponents.filter(c => c.category !== 'gateway');
+        this.boardComponents = [...nonGateways];
+        this.cdr.detectChanges();
+        return;
+      }
 
-      // Filtrar solo activos
-      const activeGateways = gateways.filter(g => g.status === 'active' && g.id);
-      console.log('[Dashboard] Gateways activos:', activeGateways);
+      // Suscribirse a gateways del proceso activo
+      this.gatewayService.getByProcessId(processId).subscribe((gateways: Gateway[]) => {
+        console.log('[Dashboard] Gateways del proceso', processId, ':', gateways);
 
-      // Convertir a BoardComponents
-      const gwLayer: BoardComponent[] = activeGateways.map(g => ({
-        id: `gateway-${g.id}`,
-        type: g.type,
-        category: 'gateway',
-        x: g.x ?? 100,
-        y: g.y ?? 100,
-        label: this.getComponentLabel(g.type),
-        gatewayId: g.id,
-      }));
+        // Filtrar solo activos
+        const activeGateways = gateways.filter(g => g.status === 'active' && g.id);
 
-      // Reemplazar solo la capa de gateways, mantener activities/edges
-      const nonGateways = this.boardComponents.filter(c => c.category !== 'gateway');
-      this.boardComponents = [...gwLayer, ...nonGateways];
-      console.log('[Dashboard] boardComponents actualizado:', this.boardComponents);
+        // Convertir a BoardComponents
+        const gwLayer: BoardComponent[] = activeGateways.map(g => ({
+          id: `gateway-${g.id}`,
+          type: g.type,
+          category: 'gateway',
+          x: g.x ?? 100,
+          y: g.y ?? 100,
+          label: this.getComponentLabel(g.type),
+          gatewayId: g.id,
+        }));
 
-      this.cdr.detectChanges();
+        // Reemplazar solo la capa de gateways
+        const nonGateways = this.boardComponents.filter(c => c.category !== 'gateway');
+        this.boardComponents = [...gwLayer, ...nonGateways];
+
+        this.cdr.detectChanges();
+      });
     });
   }
 
@@ -1818,7 +1828,7 @@ export class Dashboard implements OnInit, OnDestroy {
 
     // 2) Resolver extremos por tipo (con fallback a 'activity' si no hay tipo)
     const fromResolved = this.resolveEndpoint(edge, 'from');
-    const toResolved   = this.resolveEndpoint(edge, 'to');
+    const toResolved = this.resolveEndpoint(edge, 'to');
 
     if (!fromResolved || !toResolved) return null;
 
@@ -1889,18 +1899,20 @@ export class Dashboard implements OnInit, OnDestroy {
    * automáticamente cuando hay cambios (create, update, delete).
    */
   private subscribeActivitiesStream(): void {
-    const svc: any = this.activityService as any;
+    // Suscribirse a cambios del proceso activo
+    this.activeProcessService.activeProcessId$.subscribe(processId => {
+      if (processId === null) {
+        // No hay proceso activo, limpiar activities
+        this.activitiesCache = [];
+        this.activitiesLayer = [];
+        this.recomputeBoardIncludeCurrentGateways();
+        return;
+      }
 
-    const stream =
-      svc.items$ ??
-      svc.list$ ??
-      (svc.items && typeof svc.items.asObservable === 'function' ? svc.items.asObservable() : undefined) ??
-      (typeof svc.list === 'function' ? svc.list() : undefined) ??
-      (typeof svc.getAll === 'function' ? svc.getAll() : undefined) ??
-      (typeof svc.getActivities === 'function' ? svc.getActivities() : undefined);
+      // Obtener activities del proceso activo
+      this.activityService.getByProcessId(processId).subscribe((acts: Activity[] = []) => {
+        console.log('[Dashboard] Activities del proceso', processId, ':', acts.length, 'items');
 
-    if (stream && typeof stream.subscribe === 'function') {
-      stream.subscribe((acts: Activity[] = []) => {
         this.activitiesCache = acts ?? [];
         this.activitiesLayer = this.activitiesCache.map((a) => ({
           id: `activity-${a.id ?? `local-${this.hash()}`}`,
@@ -1923,9 +1935,7 @@ export class Dashboard implements OnInit, OnDestroy {
 
         this.recomputeBoardIncludeCurrentGateways();
       });
-    } else {
-      console.warn('[Dashboard] No encontré stream de Activities. ¿items$ / list() / getAll() / getActivities()?');
-    }
+    });
   }
 
   /**
@@ -1991,21 +2001,23 @@ export class Dashboard implements OnInit, OnDestroy {
    * Si no encuentra ningún stream, imprime warning en consola.
    */
   private subscribeEdgesStream(): void {
-    const svc: any = this.edgeService as any;
+    // Suscribirse a cambios del proceso activo
+    this.activeProcessService.activeProcessId$.subscribe(processId => {
+      if (processId === null) {
+        // No hay proceso activo, limpiar edges
+        this.edgesCache = [];
+        this.edgesLayer = [];
+        this.recomputeBoardIncludeCurrentGateways();
+        return;
+      }
 
-    const stream =
-      svc.items$ ??
-      svc.list$ ??
-      (svc.items && typeof svc.items.asObservable === 'function' ? svc.items.asObservable() : undefined) ??
-      (typeof svc.list === 'function' ? svc.list() : undefined) ??
-      (typeof svc.getAll === 'function' ? svc.getAll() : undefined) ??
-      (typeof svc.getEdges === 'function' ? svc.getEdges() : undefined);
+      // Obtener edges del proceso activo
+      this.edgeService.getByProcessId(processId).subscribe((eds: Edge[] = []) => {
+        console.log('[Dashboard] Edges del proceso', processId, ':', eds.length, 'items');
 
-    if (stream && typeof stream.subscribe === 'function') {
-      stream.subscribe((eds: Edge[] = []) => {
         this.edgesCache = eds ?? [];
 
-        // NO dibujar “pelotica verde”: solo una entrada para que el SVG trace la línea.
+        // NO dibujar "pelotica verde": solo una entrada para que el SVG trace la línea.
         this.edgesLayer = this.edgesCache.map((e) => {
           const src = (e as any).activitySourceId ?? (e as any).fromId;
           const dst = (e as any).activityDestinyId ?? (e as any).toId;
@@ -2031,9 +2043,7 @@ export class Dashboard implements OnInit, OnDestroy {
 
         this.recomputeBoardIncludeCurrentGateways();
       });
-    } else {
-      console.warn('[Dashboard] No encontré stream de Edges. ¿items$ / list() / getAll() / getEdges()?');
-    }
+    });
   }
 
   /**
@@ -2228,4 +2238,5 @@ export class Dashboard implements OnInit, OnDestroy {
     this.componentCounter = (this.componentCounter + 1) % 1_000_000;
     return this.componentCounter.toString(16);
   }
+
 }

@@ -13,7 +13,7 @@ import { Activity } from '../models/Activity';
  */
 @Injectable({ providedIn: 'root' })
 export class ActivityService {
-  private readonly httpBaseUrl = '/api/activity';
+  private readonly httpBaseUrl = 'http://localhost:8080/api/activity';
   private readonly store = new BehaviorSubject<Activity[]>([]);
   readonly list$ = this.store.asObservable();
   readonly items$ = this.list$;
@@ -79,6 +79,14 @@ export class ActivityService {
       error: (err) => console.error('[ActivityService] Error loading activities:', err)
     });
   }
+  getByProcessId(processId: number): Observable<Activity[]> {
+    return this.list$.pipe(
+      tap(list => console.log('[getByProcessId] total actividades:', list.length)),
+      map(activities => activities.filter(a => a.process?.id === processId)),
+      tap(filtered => console.log('[getByProcessId] filtradas para processId', processId, ':', filtered.length))
+    );
+  }
+
 
   // ALIASES PARA COMPATIBILIDAD
   add(payload: Omit<Activity, 'id'>) { return this.create(payload); }

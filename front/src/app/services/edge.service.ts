@@ -13,7 +13,7 @@ import { Edge } from '../models/Edge';
  */
 @Injectable({ providedIn: 'root' })
 export class EdgeService {
-  private readonly httpBaseUrl = '/api/edge';
+  private readonly httpBaseUrl = 'http://localhost:8080/api/edge';
   private readonly store = new BehaviorSubject<Edge[]>([]);
   readonly list$ = this.store.asObservable();
   readonly items$ = this.list$;
@@ -75,6 +75,27 @@ export class EdgeService {
       error: (err) => console.error('[EdgeService] Error loading edges:', err)
     });
   }
+  // Agregar después del método loadFromBackend()
+  getByProcessId(processId: number): Observable<Edge[]> {
+  return this.list$.pipe(
+    tap(edges => {
+      console.log('==============================');
+      console.log(`[DEBUG][EdgeService] Total edges cargados: ${edges.length}`);
+      console.log('[DEBUG][EdgeService] Lista completa de edges:', edges);
+      console.log('==============================');
+    }),
+    map(edges => edges.filter(e =>
+      Number(e.processId) === Number(processId) ||
+      (e.process && Number(e.process.id) === Number(processId))
+    )),
+    tap(filtered => {
+      console.log(`[DEBUG][EdgeService] Edges filtradas para processId ${processId}: ${filtered.length}`);
+      console.log('[DEBUG][EdgeService] Resultado del filtro:', filtered);
+    })
+  );
+}
+
+
 
   add(payload: Omit<Edge, 'id'>) { return this.create(payload); }
   new(payload: Omit<Edge, 'id'>) { return this.create(payload); }
