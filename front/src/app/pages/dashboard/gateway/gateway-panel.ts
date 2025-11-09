@@ -135,7 +135,25 @@ export class GatewayPanel implements OnInit, OnChanges, OnDestroy {
    * El template puede suscribirse con el pipe async o este componente puede mantener
    * un snapshot local para acceso síncrono.
    */
-  readonly gateways$: Observable<Gateway[]> = this.service.list$;
+  readonly gateways$: Observable<Gateway[]> = this.service.list$.pipe(
+    map(gateways => {
+      const activeProcessId = this.activeProcessService.getActiveProcessId();
+
+      if (!activeProcessId) {
+        console.warn('[GatewayPanel] No hay proceso activo, mostrando todos los gateways');
+        return gateways;
+      }
+
+      // Filtrar solo gateways del proceso activo
+      const filtered = gateways.filter(g =>
+        g.processId === activeProcessId ||
+        g.process?.id === activeProcessId
+      );
+
+      console.log(`[GatewayPanel] Mostrando ${filtered.length}/${gateways.length} gateways del proceso ${activeProcessId}`);
+      return filtered;
+    })
+  );
 
   /**
    * ESTADO LOCAL CON SIGNALS
@@ -532,7 +550,7 @@ export class GatewayPanel implements OnInit, OnChanges, OnDestroy {
     if (this.editingId() === id) this.reset();
 
     this.service.delete(id).subscribe({
-      next: () => {},
+      next: () => { },
       error: (err) => console.error('[GatewayPanel] Error al eliminar:', err),
     });
   }

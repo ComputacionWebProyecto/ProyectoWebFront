@@ -125,6 +125,7 @@ import {
   ValidationErrors,
 } from '@angular/forms';
 import { Observable, Subscription } from 'rxjs';
+import { map } from 'rxjs/operators';
 
 import { Edge, EndpointKind } from '../../../models/Edge';
 import { EdgeService } from '../../../services/edge.service';
@@ -196,9 +197,32 @@ export class EdgePanel implements OnInit, OnChanges, OnDestroy {
    * PROPÓSITO:
    * Mantener la lista de edges actualizada para mostrar en el panel y detectar
    * cuando se crea/elimina un edge.
-   */
-  readonly edges$: Observable<Edge[]> =
-    (this.edgeService as any).list$ ?? (this.edgeService as any).items$;
+  
+  */
+  readonly edges$: Observable<Edge[]> = (() => {
+    const baseStream = (this.edgeService as any).list$ ?? (this.edgeService as any).items$;
+
+    // 🔧 CAMBIO: Filtrar edges por proceso activo (acceso seguro a activeProcessService si existe)
+    return baseStream.pipe(
+      map((edges: Edge[]) => {
+        const activeProcessId = (this as any).activeProcessService?.getActiveProcessId?.();
+
+        if (!activeProcessId) {
+          console.warn('[EdgePanel] No hay proceso activo, mostrando todos los edges');
+          return edges;
+        }
+
+        // Filtrar solo edges del proceso activo
+        const filtered = edges.filter(e =>
+          e.processId === activeProcessId ||
+          e.process?.id === activeProcessId
+        );
+
+        console.log(`[EdgePanel] Mostrando ${filtered.length}/${edges.length} edges del proceso ${activeProcessId}`);
+        return filtered;
+      })
+    );
+  })();
 
   /**
    * STREAM DE ACTIVITIES REACTIVO

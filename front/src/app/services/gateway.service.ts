@@ -316,7 +316,7 @@ export class GatewayService {
   // Agregar después del método getCurrentSnapshot()
   getByProcessId(processId: number): Observable<Gateway[]> {
     return this.list$.pipe(
-      map(gateways => gateways.filter(g => g.processId === processId))
+      map(gateways => gateways.filter(g => g.process?.id === processId))
     );
   }
 

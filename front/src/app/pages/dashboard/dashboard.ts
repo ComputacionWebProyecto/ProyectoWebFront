@@ -1369,11 +1369,13 @@ export class Dashboard implements OnInit, OnDestroy {
     this.boardComponents.push(newComponent);
 
     if (category === 'gateway') {
+      const activeProcessId = this.activeProcessService.getActiveProcessId();
       const gateway: Gateway = {
         type,
         status: 'active',
         x: newComponent.x,
         y: newComponent.y,
+        processId: activeProcessId ?? undefined
       };
       this.gatewayService.create(gateway).subscribe({
         next: (saved: Gateway) => {

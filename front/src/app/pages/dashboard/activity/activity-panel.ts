@@ -62,7 +62,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { Observable, Subscription } from 'rxjs';
+import { Observable, Subscription, map } from 'rxjs';
 
 import { Activity } from '../../../models/Activity';
 import { ActivityService } from '../../../services/activity.service';
@@ -110,7 +110,25 @@ export class ActivityPanel implements OnInit, OnChanges, OnDestroy {
    * El template puede suscribirse con el pipe async o este componente puede mantener
    * un snapshot local.
    */
-  readonly activities$: Observable<Activity[]> = this.service.list$;
+  readonly activities$: Observable<Activity[]> = this.service.list$.pipe(
+    map((activities: Activity[]) => {
+      const activeProcessId = this.activeProcessService.getActiveProcessId();
+
+      if (!activeProcessId) {
+        console.warn('[ActivityPanel] No hay proceso activo, mostrando todas las activities');
+        return activities;
+      }
+
+      // Filtrar solo activities del proceso activo
+      const filtered = activities.filter(a =>
+        a.processId === activeProcessId ||
+        a.process?.id === activeProcessId
+      );
+
+      console.log(`[ActivityPanel] Mostrando ${filtered.length}/${activities.length} activities del proceso ${activeProcessId}`);
+      return filtered;
+    })
+  );
 
   /**
    * ESTADO LOCAL CON SIGNALS
