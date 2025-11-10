@@ -440,12 +440,12 @@ export class EdgePanel implements OnInit, OnChanges, OnDestroy {
         this.activitiesSnapshot = acts ?? [];
         console.log('[EdgePanel] Activities snapshot actualizado:', this.activitiesSnapshot.length, 'items');
         if (this.activitiesSnapshot.length === 0) {
-          console.warn('[EdgePanel] ⚠️ No hay activities en el snapshot. ¿Backend retorna vacío?');
+          console.warn('[EdgePanel] No hay activities en el snapshot. ¿Backend retorna vacío?');
         }
         this.cdr.detectChanges();
       });
     } else {
-      console.error('[EdgePanel] ❌ No encontré stream de activities para selects.');
+      console.error('[EdgePanel] No encontré stream de activities para selects.');
     }
 
     if (this.gateways$) {

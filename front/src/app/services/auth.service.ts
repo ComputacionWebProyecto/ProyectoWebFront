@@ -27,6 +27,15 @@ export class AuthService {
   ) {
 
   }
+  /**
+   * Registra un nuevo usuario y su empresa.
+   *
+   * El backend crea automáticamente la empresa, el primer proceso, el rol de administrador
+   * y el usuario. El frontend solo guarda el usuario y carga el proceso activo.
+   *
+   * @param registrationData Datos de registro (empresa y usuario)
+   * @returns Observable con la respuesta del usuario creado
+   */
   registrar(registrationData: Registration): Observable<BackendUserResponse> {
     return this.http.post<BackendUserResponse>('http://localhost:8080/api/register', registrationData).pipe(
       tap(backendUser => {
@@ -46,10 +55,11 @@ export class AuthService {
         if (!backendUser.company?.id) {
           return throwError(() => new Error('ID de empresa no disponible'));
         }
-        return this.processService.createDefaultProcess(backendUser.company.id).pipe(
-          tap(process => {
-            if (isPlatformBrowser(this.platformId) && process.id) {
-              localStorage.setItem('activeProcessId', process.id.toString());
+        // Cargar el proceso que el backend creó automáticamente
+        return this.processService.getProcessesByCompanyId(backendUser.company.id).pipe(
+          tap(processes => {
+            if (isPlatformBrowser(this.platformId) && processes.length > 0) {
+              localStorage.setItem('activeProcessId', processes[0].id!.toString());
             }
           }),
           map(() => backendUser)

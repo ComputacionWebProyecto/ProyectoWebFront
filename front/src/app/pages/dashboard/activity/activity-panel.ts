@@ -327,11 +327,11 @@ export class ActivityPanel implements OnInit, OnChanges, OnDestroy {
       const activeId = this.activeProcessService.getActiveProcessId();
       processId = activeId ?? undefined;
       if (!processId) {
-        console.error('❌ No hay proceso activo');
-        console.error('💡 Solución: Selecciona o crea un proceso desde el menú "Procesos" en la parte superior');
+        console.error('No hay proceso activo');
+        console.error('Solución: Selecciona o crea un proceso desde el menú "Procesos" en la parte superior');
         alert(
-          '⚠️ No hay un proceso activo seleccionado\n\n' +
-          '📋 Para crear activities, primero debes:\n' +
+          'No hay un proceso activo seleccionado\n\n' +
+          'Para crear activities, primero debes:\n' +
           '1. Ir al menú "Procesos" (arriba)\n' +
           '2. Seleccionar un proceso existente\n' +
           '   O crear uno nuevo\n\n' +
@@ -355,13 +355,13 @@ export class ActivityPanel implements OnInit, OnChanges, OnDestroy {
 
     this.service.create(payload).subscribe({
       next: (created) => {
-        console.log('✅ Activity creada:', created.id, created.name);
+        console.log('Activity creada:', created.id, created.name);
         // Cargar la activity recién creada en modo edición
         // para que el usuario pueda seguir editándola
         this.edit(created);
       },
       error: (err) => {
-        console.error('❌ Error creando activity:', err);
+        console.error('Error creando activity:', err);
         console.error('Payload enviado:', payload);
         alert('Error al crear activity. Verifica la consola para más detalles.');
       }
@@ -453,11 +453,11 @@ export class ActivityPanel implements OnInit, OnChanges, OnDestroy {
 
     this.service.update(merged).subscribe({
       next: (updated) => {
-        console.log('✅ Activity actualizada:', updated.id, updated.name);
+        console.log('Activity actualizada:', updated.id, updated.name);
         this.resetForm();
       },
       error: (err) => {
-        console.error('❌ Error actualizando activity:', err);
+        console.error('Error actualizando activity:', err);
         alert('Error al actualizar activity. Verifica la consola para más detalles.');
       }
     });

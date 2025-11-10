@@ -378,11 +378,11 @@ export class GatewayPanel implements OnInit, OnChanges, OnDestroy {
       if (activeId) {
         processId = activeId;
       } else {
-        console.error('❌ No hay proceso activo');
-        console.error('💡 Solución: Selecciona o crea un proceso desde el menú "Procesos"');
+        console.error('No hay proceso activo');
+        console.error('Solución: Selecciona o crea un proceso desde el menú "Procesos"');
         alert(
-          '⚠️ No hay un proceso activo seleccionado\n\n' +
-          '📋 Para crear gateways, primero debes:\n' +
+          'No hay un proceso activo seleccionado\n\n' +
+          'Para crear gateways, primero debes:\n' +
           '1. Ir al menú "Procesos" (arriba)\n' +
           '2. Seleccionar un proceso existente\n' +
           '   O crear uno nuevo\n\n' +
