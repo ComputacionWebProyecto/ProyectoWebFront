@@ -40,19 +40,37 @@ export class ActivityService {
     );
   }
 
-  update(activity: Activity): Observable<Activity> {
-    return this.http.put<Activity>(this.httpBaseUrl, activity).pipe(
-      tap(updated => {
-        const current = this.store.value;
-        const index = current.findIndex(a => a.id === activity.id);
-        if (index !== -1) {
-          const newList = [...current];
-          newList[index] = updated;
-          this.store.next(newList);
-        }
-      })
-    );
-  }
+ update(activity: Activity): Observable<Activity> {
+  
+  const dto: any = {
+    id: activity.id,
+    name: activity.name,
+    description: activity.description,
+    x: activity.x,
+    y: activity.y,
+    width: (activity as any).width,
+    height: (activity as any).height,
+    status: (activity as any).status,
+
+    
+    processId: (activity as any).processId ?? activity.process?.id,
+    roleId: (activity as any).roleId ?? activity.role?.id,
+  };
+
+  return this.http.put<Activity>(this.httpBaseUrl, dto).pipe(
+    tap(updated => {
+      const current = this.store.value;
+      const index = current.findIndex(a => a.id === activity.id);
+      if (index !== -1) {
+        const newList = [...current];
+        newList[index] = updated;
+        this.store.next(newList);
+      }
+    })
+  );
+}
+
+
 
   move(activity: Activity): Observable<Activity> {
     return this.update(activity);

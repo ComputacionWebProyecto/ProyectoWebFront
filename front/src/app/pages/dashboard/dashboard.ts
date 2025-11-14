@@ -1403,13 +1403,18 @@ export class Dashboard implements OnInit, OnDestroy {
         height: 60,
         status: 'active',
       };
-      const svc: any = this.activityService as any;
-      if (typeof svc.create === 'function') svc.create(a);
-      else if (typeof svc.add === 'function') svc.add(a);
-      else if (typeof svc.new === 'function') svc.new(a);
-      else console.warn('[Dashboard] ActivityService no expone create/add/new');
+
+      this.activityService.create(a).subscribe({
+        next: (created) => {
+          console.log('[Dashboard] Activity created from DnD', created);
+          
+        },
+        error: (err) => console.error('[Dashboard] Error al crear activity desde DnD:', err),
+      });
+
       return;
     }
+
   }
 
   /**
@@ -1506,16 +1511,27 @@ export class Dashboard implements OnInit, OnDestroy {
     }
 
     if (component?.category === 'activity' && component.activityId != null) {
-      const svc: any = this.activityService as any;
-      if (typeof svc.delete === 'function') svc.delete(component.activityId);
-      else if (typeof svc.remove === 'function') svc.remove(component.activityId);
-      else console.warn('[Dashboard] ActivityService no expone delete/remove');
-    } else if (component?.category === 'edge' && component.edgeId != null) {
-      const svc: any = this.edgeService as any;
-      if (typeof svc.delete === 'function') svc.delete(component.edgeId);
-      else if (typeof svc.remove === 'function') svc.remove(component.edgeId);
-      else console.warn('[Dashboard] EdgeService no expone delete/remove');
+      this.activityService.delete(component.activityId).subscribe({
+        next: () => {
+          console.log('[Dashboard] Activity deleted in backend', component.activityId);
+
+          
+          this.activitiesCache = this.activitiesCache.filter(a => a.id !== component.activityId);
+          this.activitiesLayer = this.activitiesLayer.filter(c => c.id !== id);
+
+          
+          this.boardComponents = this.boardComponents.filter(c => c.id !== id);
+
+          this.recomputeBoardIncludeCurrentGateways();
+        },
+        error: (err) => {
+          console.error('[Dashboard] Error deleting activity:', err);
+        },
+      });
+
+      return;
     }
+
 
     this.boardComponents = this.boardComponents.filter((c) => c.id !== id);
   }
@@ -2093,30 +2109,40 @@ export class Dashboard implements OnInit, OnDestroy {
    * LOGS:
    * Imprime warning si el servicio no expone ningún método conocido.
    */
-  private updateActivityPosition(component: BoardComponent): void {
-    if (component.category !== 'activity' || component.activityId == null) return;
 
-    const current = this.activitiesCache.find((a) => a.id === component.activityId) ?? null;
-    const updated: Activity = {
-      ...(current ?? {
-        id: component.activityId,
-        name: component.label ?? 'Activity',
-        description: '',
-      }),
-      x: component.x,
-      y: component.y,
-      width: (current as any)?.width ?? 100,
-      height: (current as any)?.height ?? 60,
-      status: (current as any)?.status ?? 'active',
-    };
+ private updateActivityPosition(component: BoardComponent): void {
+  if (component.category !== 'activity' || component.activityId == null) return;
 
-    const svc: any = this.activityService as any;
-    if (typeof svc.update === 'function') svc.update(updated);
-    else if (typeof svc.save === 'function') svc.save(updated);
-    else if (typeof svc.put === 'function') svc.put(updated);
-    else if (typeof svc.set === 'function') svc.set(updated);
-    else console.warn('[Dashboard] ActivityService no expone update/save/put/set');
-  }
+  console.log('[Dashboard] updateActivityPosition() for activity', component.activityId, 'x=', component.x, 'y=', component.y);
+
+  const current = this.activitiesCache.find((a) => a.id === component.activityId) ?? null;
+
+  const updated: Activity = {
+    ...(current ?? {
+      id: component.activityId,
+      name: component.label ?? 'Activity',
+      description: '',
+    }),
+    x: component.x,
+    y: component.y,
+    width: (current as any)?.width ?? 100,
+    height: (current as any)?.height ?? 60,
+    status: (current as any)?.status ?? 'active',
+  };
+
+  this.activityService.update(updated).subscribe({
+    next: (resp) => {
+      console.log('[Dashboard] Activity position updated in backend', resp);
+      // El BehaviorSubject se actualiza en el tap() del service
+      // y subscribeActivitiesStream() rearmará activitiesLayer
+    },
+    error: (err) => {
+      console.error('[Dashboard] Error updating activity position:', err);
+    },
+  });
+}
+
+
 
   /**
    * Recomputar boardComponents incluyendo gateways actuales
