@@ -10,6 +10,7 @@ import { ActiveProcessService } from '../../../services/active-process.service';
   templateUrl: './process-list.html',
   styleUrl: './process-list.css'
 })
+//comentario
 export class ProcessList {
   @Input() processes: Process[] = [];
   @Output() onDelete = new EventEmitter<number>();
