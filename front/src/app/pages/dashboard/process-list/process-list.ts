@@ -14,7 +14,7 @@ export class ProcessList {
   @Input() processes: Process[] = [];
   @Output() onDelete = new EventEmitter<number>();
 
-  //comentario de prueba
+  //comentario de prueba 2
   constructor(private activeProcessService: ActiveProcessService) { }
 
   selectProcess(processId: number | undefined): void {
