@@ -133,6 +133,7 @@ import { Activity } from '../../../models/Activity';
 import { ActivityService } from '../../../services/activity.service';
 import { Gateway } from '../../../models/Gateway';
 import { GatewayService } from '../../../services/gateway.service';
+import { ActiveProcessService } from '../../../services/active-process.service';
 
 @Component({
   selector: 'app-edge-panel',
@@ -172,6 +173,7 @@ export class EdgePanel implements OnInit, OnChanges, OnDestroy {
    * - ActivityService: Servicio de gestión de actividades (para poblar selects)
    * - GatewayService: Servicio de gestión de gateways (para poblar selects)
    * - ChangeDetectorRef: Forzar detección de cambios en operaciones asíncronas
+   * - ActiveProcessService: Servicio para obtener el proceso activo
    *
    * TRIPLE DEPENDENCIA:
    * A diferencia de activity-panel y gateway-panel que solo necesitan su
@@ -183,6 +185,7 @@ export class EdgePanel implements OnInit, OnChanges, OnDestroy {
   private activityService = inject(ActivityService);
   private gatewayService = inject(GatewayService);
   private cdr = inject(ChangeDetectorRef);
+  private activeProcessService = inject(ActiveProcessService);
 
   /**
    * STREAM DE EDGES REACTIVO
@@ -197,7 +200,7 @@ export class EdgePanel implements OnInit, OnChanges, OnDestroy {
    * PROPÓSITO:
    * Mantener la lista de edges actualizada para mostrar en el panel y detectar
    * cuando se crea/elimina un edge.
-  
+
   */
   readonly edges$: Observable<Edge[]> = (() => {
     const baseStream = (this.edgeService as any).list$ ?? (this.edgeService as any).items$;
@@ -303,6 +306,7 @@ export class EdgePanel implements OnInit, OnChanges, OnDestroy {
    * - edgesSub: suscripción a edges$
    * - actsSub: suscripción a activities$
    * - gwsSub: suscripción a gateways$
+   * - activeProcSub: suscripción a activeProcessId$ y activeProcessName$
    *
    * PROPÓSITO DE TRIPLE SNAPSHOT:
    * 1. edgeSnapshot: resolver edgeId cuando cambia (para extensión futura)
@@ -317,6 +321,11 @@ export class EdgePanel implements OnInit, OnChanges, OnDestroy {
   private edgesSub?: Subscription;
   private actsSub?: Subscription;
   private gwsSub?: Subscription;
+  private activeProcSub?: Subscription;
+
+  // Nombre e id del proceso activo para mostrar en la UI
+  activeProcessName: string | null = null;
+  activeProcessId: number | null = null;
 
   activitiesSnapshot: Activity[] = [];
   gatewaysSnapshot: Gateway[] = [];
@@ -358,10 +367,6 @@ export class EdgePanel implements OnInit, OnChanges, OnDestroy {
    */
   readonly form = this.fb.group(
     {
-      processId: this.fb.control<number | null>(null, {
-        validators: [Validators.min(1)],
-      }),
-
       // NUEVO tipado
       fromType: this.fb.control<EndpointKind | null>(null, {
         validators: [Validators.required],
@@ -401,10 +406,11 @@ export class EdgePanel implements OnInit, OnChanges, OnDestroy {
    * 1. Suscribe a edges$ para mantener edgeSnapshot actualizado
    * 2. Suscribe a activities$ para mantener activitiesSnapshot actualizado
    * 3. Suscribe a gateways$ para mantener gatewaysSnapshot actualizado
-   * 4. Cada suscripción verifica existencia del stream antes de suscribir
-   * 5. Muestra warnings en consola si falta algún stream
-   * 6. Logs de debug muestran cantidad de items recibidos
-   * 7. Llama a cdr.detectChanges() después de actualizar gatewaysSnapshot
+   * 4. Suscribe a activeProcessId$ y activeProcessName$ para obtener el proceso activo
+   * 5. Cada suscripción verifica existencia del stream antes de suscribir
+   * 6. Muestra warnings en consola si falta algún stream
+   * 7. Logs de debug muestran cantidad de items recibidos
+   * 8. Llama a cdr.detectChanges() después de actualizar gatewaysSnapshot
    *
    * PROPÓSITO DE TRIPLE SUSCRIPCIÓN:
    * Este componente necesita tres streams porque debe mostrar:
@@ -426,6 +432,17 @@ export class EdgePanel implements OnInit, OnChanges, OnDestroy {
    * El panel seguirá operativo aunque algún select quede vacío.
    */
   ngOnInit(): void {
+    // Suscribimos al proceso activo para mostrar nombre e id (no parcheamos formulario)
+    this.activeProcSub = this.activeProcessService.activeProcessId$.subscribe((id) => {
+      this.activeProcessId = id;
+    });
+
+    this.activeProcSub.add(
+      this.activeProcessService.activeProcessName$.subscribe((n) => {
+        this.activeProcessName = n;
+      })
+    );
+
     if (this.edges$) {
       this.edgesSub = this.edges$.subscribe((list) => {
         this.edgeSnapshot = list ?? [];
@@ -493,6 +510,7 @@ export class EdgePanel implements OnInit, OnChanges, OnDestroy {
     this.edgesSub?.unsubscribe();
     this.actsSub?.unsubscribe();
     this.gwsSub?.unsubscribe();
+    this.activeProcSub?.unsubscribe();
   }
 
   /**
@@ -835,11 +853,17 @@ export class EdgePanel implements OnInit, OnChanges, OnDestroy {
    * otro edge sin cerrar el panel.
    */
   private create(): void {
-    const { processId, label, fromType, fromId, toType, toId } = this.form.value;
+    const { label, fromType, fromId, toType, toId } = this.form.value as any;
     if (!fromType || !toType || fromId == null || toId == null) return;
 
+    // Requerimos proceso activo hoy: si no hay, no permitimos crear
+    if (this.activeProcessId == null) {
+      console.warn('[EdgePanel] No hay proceso activo: imposible crear edge.');
+      return;
+    }
+
     const payload: Omit<Edge, 'id'> = {
-      processId: (processId ?? undefined) as any,
+      processId: this.activeProcessId as any,
       label: label ?? '',
       status: 'active',
       fromType,
@@ -914,7 +938,6 @@ export class EdgePanel implements OnInit, OnChanges, OnDestroy {
     const inferredToId: number | null = item.toId ?? item.activityDestinyId ?? null;
 
     this.form.reset({
-      processId: (item as any).processId ?? null,
       fromType: inferredFromType ?? (inferredFromId != null ? 'activity' : null),
       fromId: inferredFromId,
       toType: inferredToType ?? (inferredToId != null ? 'activity' : null),
@@ -983,12 +1006,17 @@ export class EdgePanel implements OnInit, OnChanges, OnDestroy {
     const current = this.selected();
     if (!current) return;
 
-    const { processId, label, fromType, fromId, toType, toId } = this.form.value;
+    const { label, fromType, fromId, toType, toId } = this.form.value as any;
     if (!fromType || !toType || fromId == null || toId == null) return;
+
+    if (this.activeProcessId == null) {
+      console.warn('[EdgePanel] No hay proceso activo: imposible actualizar edge.');
+      return;
+    }
 
     const merged: Edge = {
       ...current,
-      processId: (processId ?? undefined) as any,
+      processId: this.activeProcessId as any,
       label: label ?? '',
       fromType,
       fromId,
@@ -1133,7 +1161,6 @@ export class EdgePanel implements OnInit, OnChanges, OnDestroy {
     this.selected.set(null);
     this.editingId.set(null);
     this.form.reset({
-      processId: null,
       fromType: null,
       fromId: null,
       toType: null,
