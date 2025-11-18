@@ -14,7 +14,7 @@ const angularApp = new AngularNodeAppEngine();
 
 /**
  * Example Express Rest API endpoints can be defined here.
- * Uncomment and define endpoints as necessary.  qw
+ * Uncomment and define endpoints as necessary.
  *
  * Example:
  * ```ts
