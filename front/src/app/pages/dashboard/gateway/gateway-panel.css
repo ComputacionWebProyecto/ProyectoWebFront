@@ -1,11 +1,11 @@
-/* Contenedor del panel - Morado/Lila #afb1ee */
+/* Contenedor del panel - Azul #bfdbfe */
 .panel {
   position: relative;
-  background: #0b1220;
-  border: 1px solid #1f2a44;
+  background: #0a1219;
+  border: 1px solid #1e2f44;
   border-radius: 16px;
   padding: 16px;
-  box-shadow: 0 8px 30px rgba(0,0,0,.35), 0 0 40px rgba(175, 177, 238, 0.15);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35), 0 0 40px rgba(191, 219, 254, 0.15);
   color: #e5e7eb;
 }
 
@@ -14,7 +14,20 @@
   font-size: 1.125rem;
   font-weight: 600;
   margin-bottom: 12px;
-  color: #afb1ee;
+  color: #bfdbfe;
+}
+
+.panel-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.panel-close:hover {
+  color: #ef4444;
 }
 
 /* Formulario */
@@ -26,7 +39,7 @@
   display: block;
   font-size: 0.9rem;
   font-weight: 600;
-  color: #c7c9f0;
+  color: #d9eafe;
 }
 
 /* Inputs base */
@@ -36,30 +49,32 @@
   width: 100%;
   border-radius: 10px;
   padding: 10px 12px;
-  border: 1px solid #2a3345;
+  border: 1px solid #1e3a5f;
   outline: none;
-  background: #121a2b;
+  background: #0d1b2e;
   color: #e5e7eb;
   transition: box-shadow .15s, border-color .15s;
 }
 
 .form input::placeholder,
 .form textarea::placeholder {
-  color: #94a3b8;
+  color: #64748b;
 }
 
 .form input:focus,
 .form select:focus,
 .form textarea:focus {
-  border-color: #afb1ee;
-  box-shadow: 0 0 0 3px rgba(175, 177, 238, 0.25);
+  border-color: #bfdbfe;
+  box-shadow: 0 0 0 3px rgba(191, 219, 254, 0.25);
 }
 
-/* Errores */
-.error { color: #ef4444; font-size: 0.75rem; }
+/* Botones de acción */
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
 
-/* Acciones */
-.actions { display: flex; gap: 8px; margin-top: 16px; }
 .actions button {
   flex: 1;
   padding: 10px 16px;
@@ -71,19 +86,18 @@
 }
 
 .actions button[type="submit"] {
-  background: linear-gradient(135deg, #afb1ee 0%, #9194d8 100%);
+  background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%);
   color: #0f172a;
-  box-shadow: 0 4px 12px rgba(175, 177, 238, 0.4);
+  box-shadow: 0 4px 12px rgba(191, 219, 254, 0.4);
 }
 
 .actions button[type="submit"]:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(175, 177, 238, 0.5);
+  box-shadow: 0 6px 16px rgba(191, 219, 254, 0.5);
 }
 
 .actions button[type="submit"]:disabled {
   background: #374151;
-  color: #9ca3af;
   cursor: not-allowed;
   box-shadow: none;
 }
@@ -98,7 +112,7 @@
   background: #374151;
 }
 
-/* Lista con scroll */
+/* Lista de gateways con scroll */
 .list {
   list-style: none;
   padding: 0;
@@ -113,7 +127,7 @@
 
   /* Scrollbar personalizado para tema oscuro */
   scrollbar-width: thin;
-  scrollbar-color: #afb1ee #1f2a44;
+  scrollbar-color: #bfdbfe #1e2f44;
 }
 
 /* Scrollbar para navegadores Webkit (Chrome, Safari, Edge) */
@@ -122,30 +136,30 @@
 }
 
 .list::-webkit-scrollbar-track {
-  background: #1f2a44;
+  background: #1e2f44;
   border-radius: 4px;
 }
 
 .list::-webkit-scrollbar-thumb {
-  background: #afb1ee;
+  background: #bfdbfe;
   border-radius: 4px;
 }
 
 .list::-webkit-scrollbar-thumb:hover {
-  background: #9194d8;
+  background: #93c5fd;
 }
 
 .list li {
-  background: rgba(175, 177, 238, 0.08);
-  border: 1px solid rgba(175, 177, 238, 0.2);
+  background: rgba(191, 219, 254, 0.08);
+  border: 1px solid rgba(191, 219, 254, 0.2);
   border-radius: 10px;
   padding: 10px 12px;
   transition: all .2s;
 }
 
 .list li:hover {
-  background: rgba(175, 177, 238, 0.12);
-  border-color: rgba(175, 177, 238, 0.35);
+  background: rgba(191, 219, 254, 0.12);
+  border-color: rgba(191, 219, 254, 0.35);
   transform: translateX(2px);
 }
 
@@ -159,8 +173,13 @@
 }
 
 .item-main strong {
-  color: #afb1ee;
+  color: #bfdbfe;
   font-weight: 700;
+}
+
+.muted {
+  color: #94a3b8;
+  font-size: 0.85rem;
 }
 
 .item-actions {
@@ -179,14 +198,14 @@
 }
 
 .item-actions button:first-child {
-  background: rgba(175, 177, 238, 0.2);
-  color: #afb1ee;
-  border: 1px solid rgba(175, 177, 238, 0.3);
+  background: rgba(191, 219, 254, 0.2);
+  color: #bfdbfe;
+  border: 1px solid rgba(191, 219, 254, 0.3);
 }
 
 .item-actions button:first-child:hover {
-  background: rgba(175, 177, 238, 0.3);
-  border-color: rgba(175, 177, 238, 0.5);
+  background: rgba(191, 219, 254, 0.3);
+  border-color: rgba(191, 219, 254, 0.5);
 }
 
 .item-actions button:last-child {
@@ -200,22 +219,9 @@
   border-color: rgba(239, 68, 68, 0.5);
 }
 
-.muted {
-  color: #94a3b8;
-  font-size: 0.85rem;
+/* Mensajes de error */
+.error {
+  color: #fca5a5;
+  font-size: 0.8rem;
+  margin-top: 4px;
 }
-
-/* Botón cerrar (X) */
-.panel-close {
-  position: absolute;
-  top: 8px;
-  right: 10px;
-  width: 28px; height: 28px;
-  border-radius: 8px;
-  border: 1px solid #243044;
-  background: #0f172a;
-  color: #cbd5e1;
-  cursor: pointer;
-  line-height: 26px;
-}
-.panel-close:hover { background: #111827; }

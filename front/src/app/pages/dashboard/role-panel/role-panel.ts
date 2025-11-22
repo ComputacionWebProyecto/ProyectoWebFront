@@ -5,6 +5,7 @@ import { Role } from '../../../models/Role';
 import { RoleList } from '../role-list/role-list';
 import { RoleForm } from '../role-form/role-form';
 import { AuthService } from '../../../services/auth.service';
+import { BackendUserResponse } from '@/app/models/BackendUserResponse';
 
 @Component({
   selector: 'app-role-panel',
@@ -28,10 +29,15 @@ export class RolePanel implements OnInit {
   }
 
   loadRoles() {
-    this.roleService.getRoles().subscribe({
-      next: (data: Role[]) => this.roles = data,
-      error: (err: any) => console.error('Error loading roles', err)
-    });
+    const user = this.authService.getUser();
+    if (user?.company?.id !== undefined) {
+      this.roleService.getRolesByCompanyId(user.company.id).subscribe({
+        next: (data: Role[]) => setTimeout(() => this.roles = data),
+        error: (err: any) => console.error('Error loading roles', err)
+      });
+    } else {
+      console.error('No company id found for user');
+    }
   }
 
   openCreateForm() {

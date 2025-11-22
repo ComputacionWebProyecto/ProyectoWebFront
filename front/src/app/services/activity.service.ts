@@ -1,59 +1,116 @@
+// src/app/services/activity.service.ts
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, of } from 'rxjs';
-import { delay, map } from 'rxjs/operators';
+import { HttpClient } from '@angular/common/http';
+import { BehaviorSubject, Observable } from 'rxjs';
+import { map, tap } from 'rxjs/operators';
 import { Activity } from '../models/Activity';
 
+/**
+ * ActivityService - Integrado con Backend Spring Boot
+ * 
+ * Servicio que gestiona el estado y las operaciones CRUD de las actividades (Activity).
+ * Conecta con el backend Spring Boot y mantiene un cache local reactivo mediante BehaviorSubject.
+ */
 @Injectable({ providedIn: 'root' })
 export class ActivityService {
-  private readonly store = new BehaviorSubject<Activity[]>([
-    // Mock inicial con coordenadas/tamaño para que se vean al cargar
-    { id: 1, name: 'Inicio', description: 'Primer paso', x: 200, y: 180, width: 100, height: 60, status: 'active' },
-    { id: 2, name: 'Revisión', description: 'Validación', x: 360, y: 180, width: 100, height: 60, status: 'active' },
-  ]);
-
-  /** stream de solo lectura (principal) */
+  private readonly httpBaseUrl = 'http://localhost:8080/api/activity';
+  private readonly store = new BehaviorSubject<Activity[]>([]);
   readonly list$ = this.store.asObservable();
-
-  /** alias para tolerancia con el Dashboard/panel */
   readonly items$ = this.list$;
 
-  /** alias de método: algunas variantes que el Dashboard podría intentar */
+  constructor(private http: HttpClient) {
+    this.loadFromBackend();
+  }
+
+  // MÉTODOS DE CONSULTA
   list(): Observable<Activity[]> { return this.list$; }
   getAll(): Observable<Activity[]> { return this.list$; }
   getActivities(): Observable<Activity[]> { return this.list$; }
-
   get(id: number): Observable<Activity | undefined> {
     return this.list$.pipe(map(list => list.find(a => a.id === id)));
   }
 
-  /** Crear */
+  // CRUD - BACKEND
   create(payload: Omit<Activity, 'id'>): Observable<Activity> {
-    const current = this.store.value;
-    const nextId = current.length ? Math.max(...current.map(a => a.id ?? 0)) + 1 : 1;
-    const created: Activity = { id: nextId, ...payload };
-    this.store.next([...current, created]);
-    return of(created).pipe(delay(150));
+    return this.http.post<Activity>(this.httpBaseUrl, payload).pipe(
+      tap(created => {
+        const current = this.store.value;
+        this.store.next([...current, created]);
+      })
+    );
   }
-  /** alias de crear */
+
+ update(activity: Activity): Observable<Activity> {
+  
+  const dto: any = {
+    id: activity.id,
+    name: activity.name,
+    description: activity.description,
+    x: activity.x,
+    y: activity.y,
+    width: (activity as any).width,
+    height: (activity as any).height,
+    status: (activity as any).status,
+
+    
+    processId: (activity as any).processId ?? activity.process?.id,
+    roleId: (activity as any).roleId ?? activity.role?.id,
+  };
+
+  return this.http.put<Activity>(this.httpBaseUrl, dto).pipe(
+    tap(updated => {
+      const current = this.store.value;
+      const index = current.findIndex(a => a.id === activity.id);
+      if (index !== -1) {
+        const newList = [...current];
+        newList[index] = updated;
+        this.store.next(newList);
+      }
+    })
+  );
+}
+
+
+
+  move(activity: Activity): Observable<Activity> {
+    return this.update(activity);
+  }
+
+  delete(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.httpBaseUrl}/${id}`).pipe(
+      tap(() => {
+        const current = this.store.value;
+        this.store.next(current.filter(a => a.id !== id));
+      })
+    );
+  }
+
+  getById(id: number): Observable<Activity> {
+    return this.http.get<Activity>(`${this.httpBaseUrl}/${id}`);
+  }
+
+  private loadFromBackend(): void {
+    this.http.get<Activity[]>(this.httpBaseUrl).pipe(
+      tap(activities => this.store.next(activities))
+    ).subscribe({
+      next: () => console.log('[ActivityService] Activities loaded from backend'),
+      error: (err) => console.error('[ActivityService] Error loading activities:', err)
+    });
+  }
+  getByProcessId(processId: number): Observable<Activity[]> {
+    return this.list$.pipe(
+      tap(list => console.log('[getByProcessId] total actividades:', list.length)),
+      map(activities => activities.filter(a => a.process?.id === processId)),
+      tap(filtered => console.log('[getByProcessId] filtradas para processId', processId, ':', filtered.length))
+    );
+  }
+
+
+  // ALIASES PARA COMPATIBILIDAD
   add(payload: Omit<Activity, 'id'>) { return this.create(payload); }
   new(payload: Omit<Activity, 'id'>) { return this.create(payload); }
-
-  /** Actualizar */
-  update(payload: Activity): Observable<Activity> {
-    const list = this.store.value.map(a => a.id === payload.id ? { ...a, ...payload } : a);
-    this.store.next(list);
-    return of(payload).pipe(delay(100));
-  }
-  /** alias de actualizar */
   save(payload: Activity) { return this.update(payload); }
   put(payload: Activity) { return this.update(payload); }
   set(payload: Activity) { return this.update(payload); }
-
-  /** Eliminar */
-  delete(id: number): Observable<void> {
-    this.store.next(this.store.value.filter(a => a.id !== id));
-    return of(void 0).pipe(delay(80));
-  }
-  /** alias de eliminar */
   remove(id: number) { return this.delete(id); }
 }

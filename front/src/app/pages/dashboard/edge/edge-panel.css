@@ -1,29 +1,214 @@
-/* Panel base */
-.panel { @apply bg-white rounded-2xl shadow p-4; }
-.panel-title { @apply text-lg font-semibold mb-3; }
+/* Contenedor del panel - Verde #8ce3a8 */
+.panel {
+  position: relative;
+  background: #0a1410;
+  border: 1px solid #1f3329;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35), 0 0 40px rgba(140, 227, 168, 0.15);
+  color: #e5e7eb;
+}
+
+/* Título */
+.panel-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #8ce3a8;
+}
 
 /* Formulario */
-.form .row { @apply mb-3; }
-.form label { @apply block text-sm font-medium mb-1; }
-.form input { @apply w-full border rounded-md px-3 py-2 outline-none; }
+.form { display: grid; gap: 12px; }
+.form .row { display: grid; gap: 6px; }
 
-/* Acciones */
-.actions { @apply flex gap-2; }
-.actions button { @apply px-3 py-2 rounded-md bg-blue-600 text-white; }
-/* No se puede usar @apply hover:...; usa una regla normal */
-.actions button:hover { opacity: .9; }
+/* Labels */
+.form label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #b4efc6;
+}
 
-/* Botón “Cancelar” (si lo usas) */
-.actions button[type="button"] { @apply bg-gray-500; }
+/* Inputs base */
+.form input,
+.form select,
+.form textarea {
+  width: 100%;
+  border-radius: 10px;
+  padding: 10px 12px;
+  border: 1px solid #1f4232;
+  outline: none;
+  background: #0d1f19;
+  color: #e5e7eb;
+  transition: box-shadow .15s, border-color .15s;
+}
 
-/* Lista: reemplazo de divide-y */
-.list { /* opcional: margen superior */ }
-.list > li { @apply border-b border-gray-200; }
-.list > li:last-child { border-bottom-width: 0; }
+.form input::placeholder,
+.form textarea::placeholder {
+  color: #6b8279;
+}
 
-.item-main { @apply py-2; }
-.item-actions { @apply flex gap-2 pb-2; }
-.muted { @apply text-gray-500; }
+.form input:focus,
+.form select:focus,
+.form textarea:focus {
+  border-color: #8ce3a8;
+  box-shadow: 0 0 0 3px rgba(140, 227, 168, 0.25);
+}
 
-/* Errores */
-.error { @apply text-red-600 text-xs; }
+/* Botones de acción */
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.actions button {
+  flex: 1;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .2s;
+  border: none;
+}
+
+.actions button[type="submit"] {
+  background: linear-gradient(135deg, #8ce3a8 0%, #6ec98c 100%);
+  color: #0f172a;
+  box-shadow: 0 4px 12px rgba(140, 227, 168, 0.4);
+}
+
+.actions button[type="submit"]:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(140, 227, 168, 0.5);
+}
+
+.actions button[type="submit"]:disabled {
+  background: #374151;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.actions button[type="button"] {
+  background: #1f2937;
+  color: #d1d5db;
+  border: 1px solid #374151;
+}
+
+.actions button[type="button"]:hover {
+  background: #374151;
+}
+
+/* Lista de edges con scroll */
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0 0 0;
+  display: grid;
+  gap: 8px;
+
+  /* Agregar scroll vertical cuando hay muchos elementos */
+  max-height: 400px;
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  /* Scrollbar personalizado para tema oscuro */
+  scrollbar-width: thin;
+  scrollbar-color: #8ce3a8 #1f3329;
+}
+
+/* Scrollbar para navegadores Webkit (Chrome, Safari, Edge) */
+.list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.list::-webkit-scrollbar-track {
+  background: #1f3329;
+  border-radius: 4px;
+}
+
+.list::-webkit-scrollbar-thumb {
+  background: #8ce3a8;
+  border-radius: 4px;
+}
+
+.list::-webkit-scrollbar-thumb:hover {
+  background: #6ec98c;
+}
+
+.list li {
+  background: rgba(140, 227, 168, 0.08);
+  border: 1px solid rgba(140, 227, 168, 0.2);
+  border-radius: 10px;
+  padding: 10px 12px;
+  transition: all .2s;
+}
+
+.list li:hover {
+  background: rgba(140, 227, 168, 0.12);
+  border-color: rgba(140, 227, 168, 0.35);
+  transform: translateX(2px);
+}
+
+.item-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}
+
+.item-main strong {
+  color: #8ce3a8;
+  font-weight: 700;
+}
+
+.muted {
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+
+.item-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.item-actions button {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s;
+  border: none;
+}
+
+.item-actions button:first-child {
+  background: rgba(140, 227, 168, 0.2);
+  color: #8ce3a8;
+  border: 1px solid rgba(140, 227, 168, 0.3);
+}
+
+.item-actions button:first-child:hover {
+  background: rgba(140, 227, 168, 0.3);
+  border-color: rgba(140, 227, 168, 0.5);
+}
+
+.item-actions button:last-child {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.item-actions button:last-child:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+/* Mensajes de error */
+.error {
+  color: #fca5a5;
+  font-size: 0.8rem;
+  margin-top: 4px;
+}

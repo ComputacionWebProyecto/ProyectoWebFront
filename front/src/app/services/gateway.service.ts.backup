@@ -41,7 +41,7 @@ export class GatewayService {
    * Se utiliza el path relativo /api/gateway que el proxy de Angular redirige
    * automáticamente a http://localhost:8080/api/gateway durante el desarrollo.
    */
-  private readonly httpBaseUrl = 'http://localhost:8080/api/gateway';
+  private readonly httpBaseUrl = '/api/gateway';
 
   /**
    * Store interno que mantiene el estado actual de todos los gateways.
@@ -312,12 +312,6 @@ export class GatewayService {
       next: () => console.log('[GatewayService] Gateways loaded from backend'),
       error: (err) => console.error('[GatewayService] Error loading gateways:', err)
     });
-  }
-  // Agregar después del método getCurrentSnapshot()
-  getByProcessId(processId: number): Observable<Gateway[]> {
-    return this.list$.pipe(
-      map(gateways => gateways.filter(g => g.process?.id === processId))
-    );
   }
 
   /**

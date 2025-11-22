@@ -21,6 +21,9 @@
 
     <img src="images/prueba.png" alt="Logo" class="w-10 h-10 rounded-full" />
     <h1 class="text-xl font-semibold tracking-wide">404 NOT FOUND</h1>
+    <span *ngIf="activeProcessName" class="text-lg font-medium text-blue-400 ml-4">
+      | {{ activeProcessName }}
+    </span>
   </div>
 
   <!-- lado Derecho: Botones -->
@@ -34,7 +37,7 @@
       Users
     </button>
 
-    
+
     <button
       (click)="$event.stopPropagation(); toggleRolesPanel()"
       class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-sm font-medium transition">

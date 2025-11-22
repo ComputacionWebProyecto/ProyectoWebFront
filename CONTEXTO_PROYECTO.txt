@@ -1,0 +1,522 @@
+================================================================================
+  RESUMEN EJECUTIVO DEL PROYECTO: FRONTEND BPMN CON ANGULAR
+================================================================================
+
+¿QUÉ ES ESTE FRONTEND?
+----------------------
+Es un editor visual de procesos de negocio estilo BPMN (Business Process Model 
+and Notation) construido con Angular 18+ (standalone components). Permite a las 
+empresas diseñar, visualizar y gestionar flujos de trabajo mediante un canvas 
+SVG interactivo tipo drag-and-drop.
+
+
+================================================================================
+COMPONENTES PRINCIPALES DEL MODELO BPMN
+================================================================================
+
+1. ACTIVITY (Actividad) - Rectángulo azul
+   ----------------------------------------
+   - Representa una tarea o acción en el proceso
+   - Tiene nombre, descripción, posición (x,y), dimensiones (width, height)
+   - Se asigna a un Role (quién la ejecuta)
+   - Pertenece a un Process (flujo completo)
+   - Se puede mover, redimensionar, conectar con otras actividades o gateways
+
+2. GATEWAY (Puerta de enlace) - Diamante
+   ---------------------------------------
+   - Representa puntos de decisión o bifurcación en el flujo
+   - Tipos: decision-gateway (?), parallel-gateway (+), exclusive-gateway (X)
+   - Tiene posición (x,y) fija (sin dimensiones)
+   - Se conecta con Activities o con otros Gateways
+
+3. EDGE (Conexión/Flecha) - Línea con flecha
+   ------------------------------------------
+   - Conecta dos nodos: Activity→Activity, Activity→Gateway, Gateway→Activity, 
+     Gateway→Gateway
+   
+   SISTEMA NUEVO (tipado): 
+     - fromType, fromId, toType, toId
+   
+   SISTEMA LEGACY (compatibilidad): 
+     - activitySourceId, activityDestinyId (solo Activity→Activity)
+   
+   - Tiene etiqueta opcional (label) y descripción
+   - Renderizado SVG con path curvo
+
+4. PROCESS (Proceso) - Contenedor lógico
+   --------------------------------------
+   - Agrupa Activities, Gateways y Edges
+   - Pertenece a una Company
+   - Un usuario puede tener múltiples procesos activos
+
+
+================================================================================
+ARQUITECTURA DEL FRONTEND
+================================================================================
+
+src/app/
+├── models/          # DTOs compatibles con backend Spring Boot
+│   ├── Activity.ts  # Actividad con posición, dimensiones, roleId, processId
+│   ├── Gateway.ts   # Gateway con tipo, posición, processId
+│   ├── Edge.ts      # Conexión tipada (fromType, fromId, toType, toId)
+│   └── Process.ts   # Proceso con nombre, companyId
+│
+├── services/        # Servicios HTTP + cache reactivo (BehaviorSubject)
+│   ├── activity.service.ts   # CRUD de Activities (INTEGRADO ✅)
+│   ├── gateway.service.ts    # CRUD de Gateways (pendiente integración)
+│   ├── edge.service.ts       # CRUD de Edges (pendiente integración)
+│   └── process.service.ts    # Gestión de procesos
+│
+└── pages/
+    └── dashboard/
+        ├── dashboard.ts           # Orquestador principal del canvas SVG
+        ├── activity-panel.ts      # Panel lateral para crear/editar Activities
+        ├── gateway-panel.ts       # Panel lateral para crear Gateways
+        ├── edge-panel.ts          # Panel lateral (contexto de conexiones)
+        └── process-form.ts        # Formulario crear/editar procesos
+
+
+================================================================================
+ESTADO ACTUAL DEL PROYECTO
+================================================================================
+
+✅ COMPLETADO:
+--------------
+
+1. Documentación exhaustiva (2,200+ líneas de comentarios JSDoc)
+   - dashboard.ts: 100% documentado
+   - Todos los servicios: documentados en archivos .backup
+   
+2. ActivityService integrado con backend:
+   - Endpoint: POST/PUT/DELETE/GET /api/activity
+   - Cache local reactivo (BehaviorSubject)
+   - Sincronización automática: tap() actualiza store tras operaciones HTTP
+   - Constructor: carga inicial con loadFromBackend()
+   - 90 líneas, limpio, sin código duplicado
+
+3. GatewayService integrado con backend:
+   - Endpoint: POST/PUT/DELETE/GET /api/gateway
+   - Cache local reactivo (BehaviorSubject)
+   - Sincronización automática con tap()
+   - Constructor: carga inicial con loadFromBackend()
+   - CRUD completo funcional
+
+4. Proxy configurado:
+   - proxy.conf.json redirige /api → http://localhost:8080/api
+   - npm start ejecuta ng serve --proxy-config proxy.conf.json
+
+5. Canvas SVG funcional:
+   - Drag & drop de Activities
+   - Redimensionamiento con manijas
+   - Creación de conexiones (click Activity → click Gateway/Activity)
+   - Zoom/Pan con scroll y arrastrar fondo
+   - Inspector de propiedades (panel derecho)
+
+
+================================================================================
+BACKEND SPRING BOOT - ENDPOINTS
+================================================================================
+
+ActivityController (/api/activity)
+-----------------------------------
+POST   /api/activity           → crear Activity (body: ActivityDTO sin id)
+PUT    /api/activity           → actualizar Activity (body: ActivityDTO con id)
+GET    /api/activity           → listar todas las Activities
+GET    /api/activity/{id}     → obtener Activity por ID
+DELETE /api/activity/{id}     → eliminar Activity
+
+GatewayController (/api/gateway)
+---------------------------------
+POST   /api/gateway           → crear Gateway
+PUT    /api/gateway           → actualizar Gateway (body con id, NO /{id} en URL)
+GET    /api/gateway           → listar todos
+GET    /api/gateway/{id}     → obtener por ID
+DELETE /api/gateway/{id}     → eliminar
+
+EdgeController (/api/edge)
+---------------------------
+POST   /api/edge              → crear Edge/conexión
+PUT    /api/edge              → actualizar Edge (body con id)
+GET    /api/edge              → listar todas
+GET    /api/edge/{id}        → obtener por ID
+DELETE /api/edge/{id}        → eliminar
+
+⚠️ IMPORTANTE: 
+El método PUT en los tres controladores espera el body con el campo id incluido, 
+NO usa /{id} en la URL (excepto GET y DELETE).
+
+
+================================================================================
+OBJETIVO ACTUAL: INTEGRAR BACKEND CON FRONTEND
+================================================================================
+
+ENFOQUE EN 3 SERVICIOS CRÍTICOS:
+---------------------------------
+
+1. ✅ ActivityService (COMPLETADO)
+   - Integrado con HttpClient
+   - Carga inicial en constructor
+   - CRUD funcional con sincronización de store
+
+2. ✅ GatewayService (COMPLETADO)
+   - Integrado con HttpClient
+   - Carga inicial en constructor
+   - CRUD funcional con sincronización de store
+   - Backup documentado creado
+
+3. ⏳ EdgeService (PENDIENTE - Requiere modificación de backend primero)
+   - Frontend listo con soporte dual (tipado + legacy)
+   - Backend necesita actualización para soportar conexiones tipadas
+   - Cambios requeridos en backend:
+     * Entidad Edge: agregar campos fromType, fromId, toType, toId
+     * EdgeDTO: agregar campos tipados
+     * EdgeService: lógica para manejar diferentes tipos de conexiones
+     * Gateway entity: agregar relaciones con Edge
+
+
+================================================================================
+FLUJO DE TRABAJO ESPERADO
+================================================================================
+
+Usuario en Dashboard (localhost:4200)
+    ↓
+Crea Activity → activityService.create(payload)
+    ↓
+POST http://localhost:4200/api/activity (proxy intercepta)
+    ↓
+Proxy redirige → http://localhost:8080/api/activity
+    ↓
+Spring Boot Controller procesa, guarda en DB, devuelve ActivityDTO con id
+    ↓
+Frontend recibe respuesta → tap() actualiza BehaviorSubject store
+    ↓
+Todos los componentes suscritos a list$ reciben el nuevo estado
+    ↓
+Dashboard renderiza la Activity en el canvas SVG
+
+
+================================================================================
+PROBLEMAS RESUELTOS
+================================================================================
+
+1. ❌ 404 en /api/activity: proxy no configurado 
+   → ✅ Añadido --proxy-config a npm start
+
+2. ❌ CORS en /api/role: request directo a :8080 
+   → ✅ Proxy soluciona esto
+
+3. ❌ HostListener syntax error: ['$event'] en eventos sin modificador 
+   → ✅ Corregido
+
+4. ❌ Código duplicado en activity.service.ts: merge fallido 
+   → ✅ Limpiado (90 líneas finales)
+
+
+================================================================================
+PRÓXIMOS PASOS
+================================================================================
+
+1. ✅ Verificar ActivityService funciona correctamente
+   - Abrir DevTools (F12) → Console
+   - Buscar: [ActivityService] Activities loaded from backend
+   - Probar crear/editar/eliminar Activities en canvas
+
+2. ✅ Integrar GatewayService (COMPLETADO)
+   - HTTP activado, métodos mock reemplazados, siguiendo patrón de ActivityService
+   - Backup con documentación completa creado
+
+3. ⏳ SIGUIENTE: Modificar Backend para soportar Edge tipado
+   - Actualizar entidad Edge para conexiones Activity↔Gateway
+   - Modificar EdgeDTO con campos fromType, fromId, toType, toId
+   - Actualizar EdgeService del backend
+   - Agregar relaciones Edge en Gateway entity
+
+4. ⏳ Integrar EdgeService Frontend (después de backend)
+   - Activar HTTP, mantener método compat() para conversión si es necesario
+
+5. ⏳ Testing E2E completo
+   - Crear proceso
+   - Añadir Activities
+   - Añadir Gateways
+   - Conectar con Edges
+   - Mover elementos
+   - Eliminar elementos
+   - Verificar persistencia (recargar página, datos deben volver desde backend)
+
+6. ⏳ PENDIENTE: Contexto de Proceso en Paneles
+   - Filtrar Activities, Gateways y Edges por processId activo
+   - Cuando se cambia de proceso, mostrar solo elementos de ese proceso
+   - Limpiar paneles cuando se crea nuevo proceso
+
+
+================================================================================
+CONTEXTO TÉCNICO CLAVE
+================================================================================
+
+- Angular 18+: Standalone components, signals, zoneless change detection
+- RxJS: BehaviorSubject para cache reactivo, tap() para efectos laterales
+- HttpClient: Observable-based, automático JSON parsing
+- SVG nativo: Renderizado manual con ViewBox, transformaciones, eventos mouse
+- Proxy: Evita CORS, desarrollo limpio (localhost:4200 → localhost:8080)
+- Spring Boot: REST API con JPA/Hibernate, DTOs con relaciones anidadas
+
+
+================================================================================
+ESTRUCTURA DE DATOS - INTERFACES TYPESCRIPT
+================================================================================
+
+Activity Interface:
+-------------------
+{
+  id?: number;
+  name: string;
+  description: string;
+  x: number;                    // Posición X en canvas
+  y: number;                    // Posición Y en canvas
+  width: number;                // Ancho del rectángulo
+  height: number;               // Alto del rectángulo
+  processId?: number;           // ID del proceso padre (enviar a backend)
+  roleId?: number;              // ID del rol asignado (enviar a backend)
+  process?: Process;            // Objeto anidado (solo respuesta backend)
+  role?: Role;                  // Objeto anidado (solo respuesta backend)
+  status: string;               // 'active' | 'inactive'
+}
+
+Gateway Interface:
+------------------
+{
+  id?: number;
+  type: string;                 // 'decision-gateway' | 'parallel-gateway' | 
+                                // 'exclusive-gateway'
+  status: string;               // 'active' | 'inactive'
+  x: number;                    // Posición X en canvas
+  y: number;                    // Posición Y en canvas
+  processId?: number;           // ID del proceso padre
+  process?: Process;            // Objeto anidado (solo respuesta backend)
+}
+
+Edge Interface:
+---------------
+{
+  id?: number;
+  label?: string;               // Etiqueta opcional para la conexión
+  description?: string;
+  
+  // SISTEMA NUEVO (tipado - soporta Activity↔Gateway)
+  fromType?: 'activity' | 'gateway';
+  fromId?: number;
+  toType?: 'activity' | 'gateway';
+  toId?: number;
+  
+  processId?: number;
+  
+  // SISTEMA LEGACY (compatibilidad - solo Activity↔Activity)
+  activitySourceId?: number;
+  activityDestinyId?: number;
+  
+  // Objetos anidados (solo respuesta backend)
+  process?: Process;
+  activitySource?: Activity;
+  activityDestiny?: Activity;
+  
+  status: string;               // 'active' | 'inactive'
+}
+
+Process Class:
+--------------
+{
+  id?: number;
+  name: string;
+  description: string;
+  companyId?: number;
+}
+
+
+================================================================================
+PATRÓN DE SERVICIO HTTP + CACHE REACTIVO
+================================================================================
+
+Ejemplo: ActivityService
+-------------------------
+
+@Injectable({ providedIn: 'root' })
+export class ActivityService {
+  private readonly httpBaseUrl = '/api/activity';
+  private readonly store = new BehaviorSubject<Activity[]>([]);
+  readonly list$ = this.store.asObservable();
+
+  constructor(private http: HttpClient) {
+    this.loadFromBackend();  // Carga inicial automática
+  }
+
+  // CREATE
+  create(payload: Omit<Activity, 'id'>): Observable<Activity> {
+    return this.http.post<Activity>(this.httpBaseUrl, payload).pipe(
+      tap(created => {
+        const current = this.store.value;
+        this.store.next([...current, created]);  // Actualiza cache local
+      })
+    );
+  }
+
+  // UPDATE
+  update(activity: Activity): Observable<Activity> {
+    return this.http.put<Activity>(this.httpBaseUrl, activity).pipe(
+      tap(updated => {
+        const current = this.store.value;
+        const index = current.findIndex(a => a.id === activity.id);
+        if (index !== -1) {
+          const newList = [...current];
+          newList[index] = updated;
+          this.store.next(newList);  // Actualiza cache local
+        }
+      })
+    );
+  }
+
+  // DELETE
+  delete(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.httpBaseUrl}/${id}`).pipe(
+      tap(() => {
+        const current = this.store.value;
+        this.store.next(current.filter(a => a.id !== id));  // Actualiza cache
+      })
+    );
+  }
+
+  // GET BY ID
+  getById(id: number): Observable<Activity> {
+    return this.http.get<Activity>(`${this.httpBaseUrl}/${id}`);
+  }
+
+  // LOAD ALL
+  private loadFromBackend(): void {
+    this.http.get<Activity[]>(this.httpBaseUrl).pipe(
+      tap(activities => this.store.next(activities))
+    ).subscribe({
+      next: () => console.log('[ActivityService] Activities loaded'),
+      error: (err) => console.error('[ActivityService] Error:', err)
+    });
+  }
+}
+
+VENTAJAS DE ESTE PATRÓN:
+------------------------
+1. Cache local reactivo: todos los componentes se suscriben a list$
+2. Sincronización automática: tap() actualiza el cache tras cada operación HTTP
+3. Un solo punto de verdad: BehaviorSubject mantiene el estado centralizado
+4. Optimización: evita requests redundantes, los componentes leen del cache
+5. Reactividad: cuando el store cambia, todos los suscriptores se actualizan
+
+
+================================================================================
+CONFIGURACIÓN DEL PROXY
+================================================================================
+
+Archivo: proxy.conf.json
+------------------------
+{
+  "/api": {
+    "target": "http://localhost:8080",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  }
+}
+
+Archivo: package.json (script modificado)
+-----------------------------------------
+"scripts": {
+  "start": "ng serve --proxy-config proxy.conf.json",
+  ...
+}
+
+CÓMO FUNCIONA:
+--------------
+1. Frontend corre en localhost:4200
+2. Backend corre en localhost:8080
+3. Cuando frontend hace: http.get('/api/activity')
+4. El navegador intenta: http://localhost:4200/api/activity
+5. Angular Dev Server intercepta la request (gracias al proxy)
+6. Reenvía a: http://localhost:8080/api/activity
+7. Recibe respuesta del backend
+8. La devuelve al frontend
+9. NO HAY ERRORES DE CORS (misma origin para el navegador)
+
+
+================================================================================
+COMANDOS ÚTILES
+================================================================================
+
+Iniciar Backend (Spring Boot):
+-------------------------------
+# Desde el directorio del backend
+./mvnw spring-boot:run
+# O con Gradle
+./gradlew bootRun
+
+Iniciar Frontend (Angular):
+----------------------------
+cd front
+npm install                    # Solo primera vez o tras cambios en package.json
+npm start                      # Inicia con proxy configurado
+
+Abrir navegador:
+----------------
+http://localhost:4200
+
+Verificar logs:
+---------------
+# Frontend: abrir DevTools (F12) → pestaña Console
+# Backend: ver terminal donde corre Spring Boot
+
+Limpiar y reconstruir (si hay problemas):
+------------------------------------------
+# Frontend
+rm -rf node_modules package-lock.json
+npm install
+
+# Backend
+./mvnw clean install
+
+
+================================================================================
+CHECKLIST DE INTEGRACIÓN COMPLETA
+================================================================================
+
+[ ] Backend Spring Boot corriendo en localhost:8080
+[ ] Frontend Angular corriendo en localhost:4200 con proxy
+[ ] ActivityService: crear Activity desde dashboard → persiste en DB
+[ ] ActivityService: editar Activity (mover/redimensionar) → actualiza en DB
+[ ] ActivityService: eliminar Activity → se borra de DB
+[ ] ActivityService: recargar página → Activities vuelven desde backend
+[ ] GatewayService: integrado con HTTP (mismo patrón que Activity)
+[ ] GatewayService: CRUD funcional end-to-end
+[ ] EdgeService: integrado con HTTP
+[ ] EdgeService: crear conexión Activity→Activity → persiste
+[ ] EdgeService: crear conexión Activity→Gateway → persiste
+[ ] EdgeService: crear conexión Gateway→Activity → persiste
+[ ] EdgeService: eliminar conexión → se borra de DB
+[ ] Test completo: crear proceso con 3 Activities, 1 Gateway, 4 Edges
+[ ] Test persistencia: recargar página → todo vuelve correctamente
+[ ] No hay errores en consola del navegador
+[ ] No hay errores en logs del backend
+
+
+================================================================================
+RESUMEN EN UNA LÍNEA
+================================================================================
+
+Editor visual BPMN en Angular 18 con canvas SVG interactivo, integrando 
+ActivityService con Spring Boot backend vía proxy, pendiente Gateway y Edge 
+para completar flujo CRUD end-to-end.
+
+
+================================================================================
+FIN DEL DOCUMENTO
+================================================================================
+Fecha: 3 de noviembre de 2025
+Proyecto: ProyectoWebFront
+Branch: santiago
+Estado: ActivityService integrado ✅ | Gateway y Edge pendientes ⏳
+================================================================================

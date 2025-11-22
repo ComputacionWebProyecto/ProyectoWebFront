@@ -1,124 +1,107 @@
 // src/app/services/edge.service.ts
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, of } from 'rxjs';
-import { delay, map } from 'rxjs/operators';
+import { HttpClient } from '@angular/common/http';
+import { BehaviorSubject, Observable } from 'rxjs';
+import { map, tap } from 'rxjs/operators';
 import { Edge } from '../models/Edge';
 
-type EdgeCompat = Edge & { fromId?: number; toId?: number };
-
+/**
+ * EdgeService - Integrado con Backend Spring Boot
+ *
+ * Servicio que gestiona el estado y las operaciones CRUD de los edges.
+ * Conecta con el backend Spring Boot y mantiene un cache local reactivo mediante BehaviorSubject.
+ */
 @Injectable({ providedIn: 'root' })
 export class EdgeService {
-  /**
-   * Store en memoria (sin backend).
-   * Guardamos con compatibilidad de campos para el Dashboard:
-   *  - activitySourceId / activityDestinyId  (nombres “de dominio”)
-   *  - fromId / toId                         (nombres que usa el SVG del board)
-   */
-  private readonly store = new BehaviorSubject<EdgeCompat[]>([
-    {
-      id: 1,
-      label: 'Flujo 1',
-      processId: 1,
-      activitySourceId: 1,
-      activityDestinyId: 2,
-      fromId: 1,
-      toId: 2,
-      status: 'active',
-    },
-  ]);
-
-  /** Stream de solo lectura “crudo” */
-  private readonly raw$ = this.store.asObservable();
-
-  /**
-   * Stream principal: cada edge viene “normalizado” con fromId/toId presentes
-   * aunque el origen tenga solo activitySourceId/activityDestinyId (o viceversa).
-   */
-  readonly list$: Observable<EdgeCompat[]> = this.raw$.pipe(
-    map(list => list.map(e => this.compat(e)))
-  );
-
-  /** Alias tolerantes que el Dashboard podría intentar usar */
+  private readonly httpBaseUrl = 'http://localhost:8080/api/edge';
+  private readonly store = new BehaviorSubject<Edge[]>([]);
+  readonly list$ = this.store.asObservable();
   readonly items$ = this.list$;
-  list(): Observable<EdgeCompat[]> { return this.list$; }
-  getAll(): Observable<EdgeCompat[]> { return this.list$; }
-  getEdges(): Observable<EdgeCompat[]> { return this.list$; }
 
-  /** Get por id */
-  get(id: number): Observable<EdgeCompat | undefined> {
+  constructor(private http: HttpClient) {
+    this.loadFromBackend();
+  }
+
+  list(): Observable<Edge[]> { return this.list$; }
+  getAll(): Observable<Edge[]> { return this.list$; }
+  getEdges(): Observable<Edge[]> { return this.list$; }
+  get(id: number): Observable<Edge | undefined> {
     return this.list$.pipe(map(list => list.find(e => e.id === id)));
   }
 
-  /** Crear (tolerante: permite altas incompletas y completa luego en el panel) */
-  create(payload: Omit<Edge, 'id'>): Observable<EdgeCompat> {
-    const current = this.store.value;
-    const nextId = current.length ? Math.max(...current.map(e => e.id ?? 0)) + 1 : 1;
-
-    // Tolerancia: si no hay label, ponemos 'Edge'
-    const label = (payload as any).label ?? 'Edge';
-
-    // Sinónimos: aceptamos fromId/toId o activitySourceId/activityDestinyId
-    const src = (payload as any).activitySourceId ?? (payload as any).fromId;
-    const dst = (payload as any).activityDestinyId ?? (payload as any).toId;
-
-    const created: EdgeCompat = {
-      id: nextId,
-      label,
-      processId: (payload as any).processId,
-      activitySourceId: src,
-      activityDestinyId: dst,
-      fromId: src,
-      toId: dst,
-      status: (payload as any).status ?? 'active',
-    };
-
-    this.store.next([...current, created]);
-    return of(this.compat(created)).pipe(delay(120));
+  create(payload: Omit<Edge, 'id'>): Observable<Edge> {
+    return this.http.post<Edge>(this.httpBaseUrl, payload).pipe(
+      tap(created => {
+        const current = this.store.value;
+        this.store.next([...current, created]);
+        console.log('Edge creado:', created.id, created.label);
+      })
+    );
   }
-  /** alias de crear */
+
+  update(edge: Edge): Observable<Edge> {
+    return this.http.put<Edge>(this.httpBaseUrl, edge).pipe(
+      tap(updated => {
+        const current = this.store.value;
+        const index = current.findIndex(e => e.id === edge.id);
+        if (index !== -1) {
+          const newList = [...current];
+          newList[index] = updated;
+          this.store.next(newList);
+        }
+      })
+    );
+  }
+
+  delete(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.httpBaseUrl}/${id}`).pipe(
+      tap(() => {
+        const current = this.store.value;
+        this.store.next(current.filter(e => e.id !== id));
+        console.log('Edge eliminado:', id);
+      })
+    );
+  }
+
+  getById(id: number): Observable<Edge> {
+    return this.http.get<Edge>(`${this.httpBaseUrl}/${id}`);
+  }
+
+  private loadFromBackend(): void {
+    this.http.get<Edge[]>(this.httpBaseUrl).pipe(
+      tap(edges => this.store.next(edges))
+    ).subscribe({
+      next: () => console.log('[EdgeService] Edges loaded from backend'),
+      error: (err) => console.error('[EdgeService] Error loading edges:', err)
+    });
+  }
+  // Agregar después del método loadFromBackend()
+  getByProcessId(processId: number): Observable<Edge[]> {
+  return this.list$.pipe(
+    tap(edges => {
+      console.log('==============================');
+      console.log(`[DEBUG][EdgeService] Total edges cargados: ${edges.length}`);
+      console.log('[DEBUG][EdgeService] Lista completa de edges:', edges);
+      console.log('==============================');
+    }),
+    map(edges => edges.filter(e =>
+      Number(e.processId) === Number(processId) ||
+      (e.process && Number(e.process.id) === Number(processId))
+    )),
+    tap(filtered => {
+      console.log(`[DEBUG][EdgeService] Edges filtradas para processId ${processId}: ${filtered.length}`);
+      console.log('[DEBUG][EdgeService] Resultado del filtro:', filtered);
+    })
+  );
+}
+
+
+
   add(payload: Omit<Edge, 'id'>) { return this.create(payload); }
   new(payload: Omit<Edge, 'id'>) { return this.create(payload); }
-
-  /** Actualizar (sinónimos bidireccionales + merge inmutable) */
-  update(payload: Edge): Observable<EdgeCompat> {
-    if (payload.id == null) {
-      throw new Error('Edge inválido: falta id para actualizar.');
-    }
-
-    const src = (payload as any).activitySourceId ?? (payload as any).fromId;
-    const dst = (payload as any).activityDestinyId ?? (payload as any).toId;
-
-    const merged: EdgeCompat = {
-      ...(this.store.value.find(e => e.id === payload.id) ?? { id: payload.id } as EdgeCompat),
-      ...payload,
-      activitySourceId: src,
-      activityDestinyId: dst,
-      fromId: src,
-      toId: dst,
-    };
-
-    const list = this.store.value.map(e => (e.id === payload.id ? merged : e));
-    this.store.next(list);
-    return of(this.compat(merged)).pipe(delay(100));
-  }
-  /** alias de actualizar */
   save(payload: Edge) { return this.update(payload); }
-  put(payload: Edge)  { return this.update(payload); }
-  set(payload: Edge)  { return this.update(payload); }
-
-  /** Eliminar */
-  delete(id: number): Observable<void> {
-    this.store.next(this.store.value.filter(e => e.id !== id));
-    return of(void 0).pipe(delay(80));
-  }
-  /** alias de eliminar */
+  put(payload: Edge) { return this.update(payload); }
+  set(payload: Edge) { return this.update(payload); }
   remove(id: number) { return this.delete(id); }
-
-  /** Normaliza un edge para que siempre tenga fromId/toId presentes */
-  private compat(e: EdgeCompat): EdgeCompat {
-    const fromId = e.fromId ?? e.activitySourceId;
-    const toId   = e.toId   ?? e.activityDestinyId;
-    if (fromId === e.fromId && toId === e.toId) return e;
-    return { ...e, fromId, toId };
-  }
 }
+

@@ -10,6 +10,7 @@ import { ActiveProcessService } from '../../../services/active-process.service';
   templateUrl: './process-list.html',
   styleUrl: './process-list.css'
 })
+//comentario
 export class ProcessList {
   @Input() processes: Process[] = [];
   @Output() onDelete = new EventEmitter<number>();
@@ -18,8 +19,9 @@ export class ProcessList {
 
   selectProcess(processId: number | undefined): void {
     if (processId) {
-      this.activeProcessService.setActiveProcess(processId);
-      console.log('Proceso seleccionado:', processId);
+      const process = this.processes.find(p => p.id === processId);
+      this.activeProcessService.setActiveProcess(processId, process?.name);
+      console.log('Proceso seleccionado:', processId, process?.name);
     }
   }
 }
