@@ -9,4 +9,5 @@ export interface BackendUserResponse {
   status: string;
   company: Company;
   role: Role;
+  token: string;
 }
