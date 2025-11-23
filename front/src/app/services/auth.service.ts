@@ -1,6 +1,6 @@
 import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { catchError, map, Observable, switchMap, tap, throwError } from 'rxjs';
+import { catchError, map, Observable, of, switchMap, tap, throwError } from 'rxjs';
 import { Role } from '../models/Role';
 import { Process } from '../models/Process';
 import { Registration } from '../models/Registration';
@@ -8,7 +8,6 @@ import { LoginRequest } from '../models/Login';
 import { HttpClient } from '@angular/common/http';
 import { ProcessService } from './process.service';
 import { BackendUserSafeResponse } from '../models/BackendUserSafeResponse';
-import { UserSafe } from '../models/UserSafe';
 import { AuthorizedResponse } from '../models/AuthorizedResponse';
 
 @Injectable({
@@ -24,10 +23,6 @@ export class AuthService {
     private processService: ProcessService
   ) { }
 
-  /**
-   * Registra un nuevo usuario y su empresa.
-   * CORREGIDO: El registro se considera exitoso aunque falle cargar procesos
-   */
   registrar(registrationData: Registration): Observable<AuthorizedResponse> {
     return this.http.post<AuthorizedResponse>('http://localhost:8080/api/register', registrationData).pipe(
       tap(authorizedUser => {
@@ -67,10 +62,6 @@ export class AuthService {
     );
   }
 
-  /**
-   * Login de usuario
-   * CORREGIDO: El login se considera exitoso aunque falle cargar procesos
-   */
   login(credentials: LoginRequest): Observable<AuthorizedResponse> {
     return this.http.post<AuthorizedResponse>('http://localhost:8080/api/login', credentials).pipe(
       tap(authorizedUser => {
@@ -84,6 +75,7 @@ export class AuthService {
 
           // Guardar el usuario completo
           localStorage.setItem('user', JSON.stringify(authorizedUser.user));
+          console.log("usuario guardado: ", authorizedUser.user)
         }
       }),
       switchMap(authorizedUser => {
@@ -152,5 +144,48 @@ export class AuthService {
     const user = localStorage.getItem('user');
     const token = localStorage.getItem('token');
     return !!(user && token);
+  }
+  validateToken(): Observable<boolean> {
+    return this.http.get<void>('http://localhost:8080/api/auth/validate').pipe(
+      map(() => true),
+      catchError(() => {
+        console.warn('Token inválido o expirado');
+        return of(false);
+      })
+    );
+  }
+  renewToken(): Observable<AuthorizedResponse> {
+    return this.http.post<AuthorizedResponse>('http://localhost:8080/api/auth/renew-token', {}).pipe(
+      tap(response => {
+        if (isPlatformBrowser(this.platformId)) {
+          if (response.token) {
+            localStorage.setItem('token', response.token);
+            console.log('Token renovado exitosamente');
+          }
+          if (response.user) {
+            localStorage.setItem('user', JSON.stringify(response.user));
+          }
+        }
+      }),
+      catchError(error => {
+        console.error('Error renovando token:', error);
+        this.logout();
+        return throwError(() => error);
+      })
+    );
+  }
+  startTokenRenewal(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    // Renovar cada 60 minutos (el token dura 72 horas)
+    const renewalInterval = 60 * 60 * 1000; // 1 hora
+
+    setInterval(() => {
+      if (this.isLoggedIn()) {
+        this.renewToken().subscribe({
+          next: () => console.log('Token renovado automáticamente'),
+          error: (err) => console.error('Error en renovación automática:', err)
+        });
+      }
+    }, renewalInterval);
   }
 }

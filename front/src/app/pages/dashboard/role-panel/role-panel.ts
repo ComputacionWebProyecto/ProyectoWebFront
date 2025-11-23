@@ -22,7 +22,7 @@ export class RolePanel implements OnInit {
   current: Role = new Role('', '');
 
   mode: 'none' | 'edit' | 'delete' | 'consult' = 'none';
-  constructor(private roleService: RoleService, private authService: AuthService) {}
+  constructor(private roleService: RoleService, private authService: AuthService) { }
 
   ngOnInit(): void {
     this.loadRoles();
@@ -32,7 +32,10 @@ export class RolePanel implements OnInit {
     const user = this.authService.getUser();
     if (user?.company.id !== undefined) {
       this.roleService.getRolesByCompanyId(user.company.id).subscribe({
-        next: (data: Role[]) => setTimeout(() => this.roles = data),
+        next: (data: Role[]) => {
+          this.roles = data;
+          console.log('Roles cargados:', data.length);
+        },
         error: (err: any) => console.error('Error loading roles', err)
       });
     } else {
@@ -85,16 +88,16 @@ export class RolePanel implements OnInit {
         console.error('Error deleting role', err);
       }
     });
-    }
-  enterEditMode()   { 
-      this.mode = this.mode === 'edit'   ? 'none' : 'edit'; 
-    }
-  enterDeleteMode() { 
-      this.mode = this.mode === 'delete' ? 'none' : 'delete';
-    }
-  enterConsultMode(){ 
-      this.mode = this.mode === 'consult'? 'none' : 'consult'; 
-    }
+  }
+  enterEditMode() {
+    this.mode = this.mode === 'edit' ? 'none' : 'edit';
+  }
+  enterDeleteMode() {
+    this.mode = this.mode === 'delete' ? 'none' : 'delete';
+  }
+  enterConsultMode() {
+    this.mode = this.mode === 'consult' ? 'none' : 'consult';
+  }
 
 
 

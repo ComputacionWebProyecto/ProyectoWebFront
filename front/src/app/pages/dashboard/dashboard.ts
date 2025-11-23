@@ -1394,6 +1394,7 @@ export class Dashboard implements OnInit, OnDestroy {
     }
 
     if (category === 'activity') {
+      const activeProcessId = this.activeProcessService.getActiveProcessId();
       const a: Activity = {
         name: 'Activity',
         description: '',
@@ -1401,6 +1402,7 @@ export class Dashboard implements OnInit, OnDestroy {
         y: newComponent.y,
         width: 100,
         height: 60,
+        processId: activeProcessId ?? undefined,
         status: 'active',
       };
 
