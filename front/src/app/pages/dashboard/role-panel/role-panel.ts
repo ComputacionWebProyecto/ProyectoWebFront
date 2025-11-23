@@ -30,7 +30,7 @@ export class RolePanel implements OnInit {
 
   loadRoles() {
     const user = this.authService.getUser();
-    if (user?.company?.id !== undefined) {
+    if (user?.company.id !== undefined) {
       this.roleService.getRolesByCompanyId(user.company.id).subscribe({
         next: (data: Role[]) => setTimeout(() => this.roles = data),
         error: (err: any) => console.error('Error loading roles', err)
@@ -60,7 +60,7 @@ export class RolePanel implements OnInit {
 
   saveRole(role: Role) {
     const user = this.authService.getUser();
-    role.companyId = user?.company?.id;
+    role.companyId = user?.company.id;
 
     const request$ = role.id
       ? this.roleService.updateRole(role.id, role)

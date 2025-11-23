@@ -35,7 +35,7 @@ export class ProcessPanel implements OnInit {
    loadProcesses() {
     const user = this.authService.getUser();
       console.log("datos usuario: ", user);
-      const companyId = user?.company?.id;
+      const companyId = user?.company.id;
       if (typeof companyId === 'number') {
         this.processService.getProcessesSummaryByCompanyId(companyId).subscribe({
           next: (data: BackendProcessResponse[]) => {
@@ -83,7 +83,7 @@ export class ProcessPanel implements OnInit {
         // Seleccionar automáticamente el proceso recién creado
         if (created?.id) {
           this.activeProcessService.setActiveProcess(created.id);
-          console.log('✅ Proceso creado y seleccionado automáticamente:', created.id);
+          console.log('Proceso creado y seleccionado automáticamente:', created.id);
         }
       },
       error: (err) => console.error('Error creating process', err)
