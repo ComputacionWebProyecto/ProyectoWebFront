@@ -225,3 +225,56 @@
   font-size: 0.8rem;
   margin-top: 4px;
 }
+
+/* Vista previa del icono seleccionado */
+.gateway-preview {
+  margin-top: 8px;
+  padding: 12px;
+  background: rgba(140, 227, 168, 0.08);
+  border: 1px solid rgba(140, 227, 168, 0.2);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.icon-container {
+  display: flex;
+  align-items: center;
+}
+
+/* Colores para tipos de gateway */
+.text-green-400 {
+  color: #4ade80;
+}
+
+.text-amber-400 {
+  color: #fbbf24;
+}
+
+.text-blue-400 {
+  color: #60a5fa;
+}
+
+/* Flex utilities si no existen */
+.flex {
+  display: flex;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.gap-2 {
+  gap: 0.5rem;
+}
+
+.ml-2 {
+  margin-left: 0.5rem;
+}
+
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

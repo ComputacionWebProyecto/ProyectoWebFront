@@ -88,11 +88,14 @@ import { Gateway } from '../../../models/Gateway';
 import { GatewayService } from '../../../services/gateway.service';
 import { ActiveProcessService } from '../../../services/active-process.service';
 import { NotificationService } from '../../../services/notification.service';
+import { Exclusive } from '../icons/exclusive/exclusive';
+import { Decision } from '../icons/decision/decision';
+import { Parallel } from '../icons/parallel/parallel';
 
 @Component({
   selector: 'app-gateway-panel',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, Exclusive, Decision, Parallel],
   templateUrl: './gateway-panel.html',
   styleUrls: ['./gateway-panel.css'],
 })
@@ -196,9 +199,9 @@ export class GatewayPanel implements OnInit, OnChanges, OnDestroy {
    * - (X): Exclusivo - similar a decisión pero con semántica XOR
    */
   readonly gatewayTypes = [
-    { value: 'decision-gateway', label: 'Decisión (?)' },
-    { value: 'parallel-gateway', label: 'Paralelo (+)' },
-    { value: 'exclusive-gateway', label: 'Exclusivo (X)' },
+    { value: 'decision', label: 'Decisión', icon: 'decision' },
+    { value: 'parallel', label: 'Paralelo', icon: 'parallel' },
+    { value: 'exclusive', label: 'Exclusivo', icon: 'exclusive' },
   ];
 
   /**

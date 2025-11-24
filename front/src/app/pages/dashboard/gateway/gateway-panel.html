@@ -26,6 +26,30 @@
           {{ t.label }}
         </option>
       </select>
+      <!-- Preview del icono seleccionado -->
+      <div class="gateway-preview" *ngIf="form.get('type')?.value as selectedType">
+        <span class="text-sm text-slate-400">Vista previa:</span>
+        <div class="icon-container">
+          <ng-container [ngSwitch]="selectedType">
+            <app-decision 
+              *ngSwitchCase="'decision'" 
+              [size]="32"
+              class="text-green-400"
+            />
+            <app-exclusive 
+              *ngSwitchCase="'exclusive'" 
+              [size]="32"
+              class="text-amber-400"
+            />
+            <app-parallel 
+              *ngSwitchCase="'parallel'" 
+              [size]="32"
+              class="text-blue-400"
+            />
+          </ng-container>
+          <span class="ml-2 text-sm">{{ getGatewayLabel(selectedType) }}</span>
+        </div>
+      </div>
       <small class="error" *ngIf="form.get('type')?.touched && form.get('type')?.errors?.['required']">
         Tipo requerido.
       </small>
@@ -63,11 +87,33 @@
     </div>
   </form>
 
-  <!-- Lista de gateways -->
+  <!-- Lista de gateways CON ICONOS -->
   <ul class="list" *ngIf="(gateways$ | async) as items; else emptyState">
     <li *ngFor="let g of items; trackBy: trackById">
       <div class="item-main">
-        <strong class="block truncate">#{{ g.id }} — {{ getGatewayLabel(g.type) }}</strong>
+        <div class="flex items-center gap-2">
+          <!-- Icono según tipo -->
+          <ng-container [ngSwitch]="g.type">
+            <app-decision 
+              *ngSwitchCase="'decision'" 
+              [size]="20"
+              class="text-green-400"
+            />
+            <app-exclusive 
+              *ngSwitchCase="'exclusive'" 
+              [size]="20"
+              class="text-amber-400"
+            />
+            <app-parallel 
+              *ngSwitchCase="'parallel'" 
+              [size]="20"
+              class="text-blue-400"
+            />
+            <span *ngSwitchDefault class="text-slate-500">◇</span>
+          </ng-container>
+          
+          <strong class="truncate">#{{ g.id }} — {{ getGatewayLabel(g.type) }}</strong>
+        </div>
         <span class="muted">&nbsp;({{ g.status }})</span>
       </div>
       <div class="item-actions">
