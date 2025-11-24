@@ -67,6 +67,9 @@ import { Observable, Subscription, map } from 'rxjs';
 import { Activity } from '../../../models/Activity';
 import { ActivityService } from '../../../services/activity.service';
 import { ActiveProcessService } from '../../../services/active-process.service';
+import { RoleService } from '../../../services/role.service';
+import { AuthService } from '../../../services/auth.service';
+import { BackendRoleResponse } from '../../../models/BackendRoleResponse';
 
 @Component({
   selector: 'app-activity-panel',
@@ -102,6 +105,8 @@ export class ActivityPanel implements OnInit, OnChanges, OnDestroy {
   private fb = inject(FormBuilder);
   private service = inject(ActivityService);
   private activeProcessService = inject(ActiveProcessService);
+  private roleService = inject(RoleService);
+  private authService = inject(AuthService);
 
   /**
    * STREAM DE DATOS REACTIVO
@@ -151,6 +156,14 @@ export class ActivityPanel implements OnInit, OnChanges, OnDestroy {
    */
   private snapshot: Activity[] = [];
   private sub?: Subscription;
+
+  /**
+   * ROLES DISPONIBLES
+   *
+   * Lista de roles de la compañía del usuario actual, cargados para mostrar
+   * en el selector de rol al crear/editar actividades.
+   */
+  roles: BackendRoleResponse[] = [];
 
   /**
    * FORMULARIO REACTIVO
@@ -203,6 +216,39 @@ export class ActivityPanel implements OnInit, OnChanges, OnDestroy {
       this.snapshot = list ?? [];
       this.applyInputSelection();
     });
+    this.loadRoles();
+  }
+
+  /**
+   * Carga los roles disponibles de la compañía del usuario actual.
+   *
+   * COMPORTAMIENTO:
+   * 1. Obtiene el usuario actual del AuthService
+   * 2. Extrae el companyId del usuario
+   * 3. Llama a roleService.getRolesByCompanyId() para obtener los roles
+   * 4. Almacena los roles en this.roles para usar en el template
+   *
+   * USO:
+   * Los roles se muestran en un select en el formulario para que el usuario
+   * pueda asignar un rol a la actividad al crearla o editarla.
+   */
+  private loadRoles(): void {
+    const currentUser = this.authService.getUser();
+    const companyId = currentUser?.company.id;
+    
+    if (typeof companyId === 'number') {
+      this.roleService.getRolesByCompanyId(companyId).subscribe({
+        next: (data: BackendRoleResponse[]) => {
+          this.roles = data;
+          console.log('[ActivityPanel] Roles cargados:', data.length);
+        },
+        error: (err) => {
+          console.error('[ActivityPanel] Error cargando roles:', err);
+        }
+      });
+    } else {
+      console.warn('[ActivityPanel] No se pudo obtener companyId del usuario');
+    }
   }
 
   /**

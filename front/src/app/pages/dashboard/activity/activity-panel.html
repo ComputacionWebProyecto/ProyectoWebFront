@@ -46,6 +46,21 @@
         placeholder="Descripción (opcional)" />
     </div>
 
+    <div class="row">
+      <label for="roleId">Rol asignado</label>
+      <select
+        id="roleId"
+        formControlName="roleId">
+        <option [ngValue]="undefined">Seleccione un rol (opcional)</option>
+        <option *ngFor="let role of roles" [ngValue]="role.id">
+          {{ role.nombre }}
+        </option>
+      </select>
+      <small class="text-slate-400 text-xs mt-1">
+        Asigna un rol a esta actividad para definir quién la ejecutará.
+      </small>
+    </div>
+
     <div class="actions">
       <button type="submit" [disabled]="form.invalid">
         {{ editingId() ? 'Actualizar' : 'Crear' }}
