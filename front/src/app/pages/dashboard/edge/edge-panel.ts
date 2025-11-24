@@ -247,7 +247,7 @@ export class EdgePanel implements OnInit, OnChanges, OnDestroy {
     const stream = svc.list$ ?? svc.items$ ?? svc.getAll?.() ?? svc.list?.();
 
     if (!stream) {
-      console.error('[EdgePanel] ❌ No se encontró stream de Activities. Servicio:', svc);
+      console.error('[EdgePanel]  No se encontró stream de Activities. Servicio:', svc);
       console.error('[EdgePanel] Propiedades disponibles:', Object.keys(svc));
     }
 
@@ -432,6 +432,7 @@ export class EdgePanel implements OnInit, OnChanges, OnDestroy {
    * El panel seguirá operativo aunque algún select quede vacío.
    */
   ngOnInit(): void {
+    
     // Suscribimos al proceso activo para mostrar nombre e id (no parcheamos formulario)
     this.activeProcSub = this.activeProcessService.activeProcessId$.subscribe((id) => {
       this.activeProcessId = id;
@@ -454,7 +455,7 @@ export class EdgePanel implements OnInit, OnChanges, OnDestroy {
 
     if (this.activities$) {
       this.actsSub = this.activities$.subscribe((acts) => {
-        this.activitiesSnapshot = acts ?? [];
+        this.activitiesSnapshot = (acts ?? []).filter(a => a.process?.id === this.activeProcessId);
         console.log('[EdgePanel] Activities snapshot actualizado:', this.activitiesSnapshot.length, 'items');
         if (this.activitiesSnapshot.length === 0) {
           console.warn('[EdgePanel] No hay activities en el snapshot. ¿Backend retorna vacío?');
@@ -467,7 +468,7 @@ export class EdgePanel implements OnInit, OnChanges, OnDestroy {
 
     if (this.gateways$) {
       this.gwsSub = this.gateways$.subscribe((gws) => {
-        this.gatewaysSnapshot = gws ?? [];
+        this.gatewaysSnapshot = (gws ?? []).filter(g => g.process?.id === this.activeProcessId);
         console.log('[EdgePanel] Gateways recibidos en snapshot:', this.gatewaysSnapshot.length, 'items', this.gatewaysSnapshot);
         this.cdr.detectChanges();
       });
