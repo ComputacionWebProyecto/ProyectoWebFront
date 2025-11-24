@@ -7,6 +7,7 @@ import { ProcessForm } from '../process-form/process-form';
 import { AuthService } from '../../../services/auth.service';
 import { ActiveProcessService } from '../../../services/active-process.service';
 import { BackendProcessResponse } from '../../../models/BackendProcessResponse';
+import { NotificationService } from '../../../services/notification.service';
 
 
 @Component({
@@ -25,6 +26,7 @@ export class ProcessPanel implements OnInit {
     private processService: ProcessService,
     private authService: AuthService,
     private activeProcessService: ActiveProcessService,
+    private notificationService: NotificationService,
     private cdr: ChangeDetectorRef
   ) {}
 
@@ -69,7 +71,7 @@ export class ProcessPanel implements OnInit {
 
     if (!companyId) {
       console.error('No se pudo obtener companyId del usuario:', user);
-      alert('Error: No se pudo determinar la empresa del usuario.');
+      this.notificationService.showError('Error: No se pudo determinar la empresa del usuario.');
       return;
     }
 

@@ -32,7 +32,7 @@ export class Auth implements OnInit {
         this.router.navigate(['dashboard']);
       },
       error: (err) => {
-        alert(err.error?.message || 'Error desconocido');
+        // El error ya es manejado por el interceptor
       }
     });
   }
@@ -47,7 +47,7 @@ export class Auth implements OnInit {
       },
       error: (err) => {
         console.log('Error en login:', err);
-        alert(err.error?.message || 'Error al iniciar sesión');
+        // El error ya es manejado por el interceptor
       }
     });
   }
