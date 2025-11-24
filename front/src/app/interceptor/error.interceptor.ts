@@ -45,8 +45,9 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
         }
       }
 
-      // Ignorar errores de cancelación o si se desea manejar manualmente en el componente
-      if (error.status !== 0) {
+      if (error.status === 0) {
+        notificationService.showError('No se pudo conectar con el servidor. Verifique su conexión.');
+      } else {
         notificationService.showError(errorMessage);
       }
 

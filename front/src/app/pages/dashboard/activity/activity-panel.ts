@@ -67,6 +67,7 @@ import { Observable, Subscription, map } from 'rxjs';
 import { Activity } from '../../../models/Activity';
 import { ActivityService } from '../../../services/activity.service';
 import { ActiveProcessService } from '../../../services/active-process.service';
+import { NotificationService } from '../../../services/notification.service';
 
 @Component({
   selector: 'app-activity-panel',
@@ -102,6 +103,7 @@ export class ActivityPanel implements OnInit, OnChanges, OnDestroy {
   private fb = inject(FormBuilder);
   private service = inject(ActivityService);
   private activeProcessService = inject(ActiveProcessService);
+  private notificationService = inject(NotificationService);
 
   /**
    * STREAM DE DATOS REACTIVO
@@ -329,14 +331,8 @@ export class ActivityPanel implements OnInit, OnChanges, OnDestroy {
       if (!processId) {
         console.error('No hay proceso activo');
         console.error('Solución: Selecciona o crea un proceso desde el menú "Procesos" en la parte superior');
-        alert(
-          'No hay un proceso activo seleccionado\n\n' +
-          'Para crear activities, primero debes:\n' +
-          '1. Ir al menú "Procesos" (arriba)\n' +
-          '2. Seleccionar un proceso existente\n' +
-          '   O crear uno nuevo\n\n' +
-          'Luego podrás crear activities en el dashboard.'
-        );
+        console.error('Solución: Selecciona o crea un proceso desde el menú "Procesos" en la parte superior');
+        this.notificationService.showWarning('No hay un proceso activo seleccionado. Por favor selecciona uno primero.');
         return;
       }
     }
@@ -363,7 +359,7 @@ export class ActivityPanel implements OnInit, OnChanges, OnDestroy {
       error: (err) => {
         console.error('Error creando activity:', err);
         console.error('Payload enviado:', payload);
-        alert('Error al crear activity. Verifica la consola para más detalles.');
+        // El interceptor ya maneja el error
       }
     });
   }
@@ -458,7 +454,7 @@ export class ActivityPanel implements OnInit, OnChanges, OnDestroy {
       },
       error: (err) => {
         console.error('Error actualizando activity:', err);
-        alert('Error al actualizar activity. Verifica la consola para más detalles.');
+        // El interceptor ya maneja el error
       }
     });
   }

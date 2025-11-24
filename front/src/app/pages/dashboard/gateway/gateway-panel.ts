@@ -87,6 +87,7 @@ import { map } from 'rxjs/operators';
 import { Gateway } from '../../../models/Gateway';
 import { GatewayService } from '../../../services/gateway.service';
 import { ActiveProcessService } from '../../../services/active-process.service';
+import { NotificationService } from '../../../services/notification.service';
 
 @Component({
   selector: 'app-gateway-panel',
@@ -127,6 +128,7 @@ export class GatewayPanel implements OnInit, OnChanges, OnDestroy {
   private service = inject(GatewayService);
   private activeProcessService = inject(ActiveProcessService);
   private cdr = inject(ChangeDetectorRef);
+  private notificationService = inject(NotificationService);
 
   /**
    * STREAM DE DATOS REACTIVO
@@ -380,14 +382,8 @@ export class GatewayPanel implements OnInit, OnChanges, OnDestroy {
       } else {
         console.error('No hay proceso activo');
         console.error('Solución: Selecciona o crea un proceso desde el menú "Procesos"');
-        alert(
-          'No hay un proceso activo seleccionado\n\n' +
-          'Para crear gateways, primero debes:\n' +
-          '1. Ir al menú "Procesos" (arriba)\n' +
-          '2. Seleccionar un proceso existente\n' +
-          '   O crear uno nuevo\n\n' +
-          'Luego podrás crear gateways en el dashboard.'
-        );
+        console.error('Solución: Selecciona o crea un proceso desde el menú "Procesos"');
+        this.notificationService.showWarning('No hay un proceso activo seleccionado. Por favor selecciona uno primero.');
         return;
       }
     }
@@ -405,7 +401,8 @@ export class GatewayPanel implements OnInit, OnChanges, OnDestroy {
       error: (err) => {
         console.error('[GatewayPanel] Error al crear:', err);
         console.error('Payload enviado:', payload);
-        alert('Error al crear gateway. Verifica la consola para más detalles.');
+        // El interceptor ya maneja el error, pero si queremos ser específicos:
+        // this.notificationService.showError('Error al crear gateway.');
       },
     });
   }
