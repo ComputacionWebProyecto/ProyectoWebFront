@@ -1,47 +1,47 @@
 /**
  * ACTIVITY PANEL COMPONENT
- * 
+ *
  * Panel lateral para la gestión CRUD de actividades en el proceso de negocio.
  * Permite crear nuevas actividades y editar/eliminar las existentes mediante
  * un formulario reactivo con validaciones.
- * 
+ *
  * ARQUITECTURA:
  * Este componente sigue el patrón de "panel lateral reutilizable" con dos modos:
  * - MODO CREAR: Formulario vacío para crear una nueva actividad
  * - MODO EDITAR: Formulario pre-poblado para modificar una actividad existente
- * 
+ *
  * COMUNICACIÓN CON EL PADRE (Dashboard):
  * - INPUT activityId: El Dashboard puede enviar un id para forzar la carga en modo edición
  * - OUTPUT close: El panel emite este evento para que el Dashboard lo oculte
- * 
+ *
  * GESTIÓN DE ESTADO:
  * - Signals: isEditing (boolean), selected (Activity | null)
  * - FormGroup reactivo con validaciones sincrónicas
  * - Snapshot local del stream de actividades para resolución de ids
- * 
+ *
  * CICLO DE VIDA:
  * - ngOnInit: Suscribe al stream de actividades y mantiene snapshot actualizado
  * - ngOnChanges: Detecta cambios en activityId y carga la actividad correspondiente
  * - ngOnDestroy: Limpia suscripción para prevenir memory leaks
- * 
+ *
  * FORMULARIO:
  * Los campos del formulario están configurados con nonNullable:true excepto:
  * - processId: number | undefined (opcional, actividad puede no estar asignada a proceso)
  * - roleId: number | undefined (opcional, actividad puede no tener rol específico)
- * 
+ *
  * Validaciones:
  * - name: requerido, mínimo 2 caracteres
  * - description: opcional
  * - x, y, width, height: numéricos con valores por defecto
- * 
+ *
  * INTEGRACIÓN CON ACTIVITYSERVICE:
  * El componente llama a create(), update() y delete() del servicio.
  * Usa duck typing (as any) para manejar la dualidad Observable/void durante
  * la transición mock → backend HTTP.
- * 
+ *
  * USO TÍPICO:
  * ```html
- * <app-activity-panel 
+ * <app-activity-panel
  *   [activityId]="selectedActivityId"
  *   (close)="hideActivityPanel()"
  * />
@@ -62,10 +62,14 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { Observable, Subscription } from 'rxjs';
+import { Observable, Subscription, map } from 'rxjs';
 
 import { Activity } from '../../../models/Activity';
 import { ActivityService } from '../../../services/activity.service';
+import { ActiveProcessService } from '../../../services/active-process.service';
+import { RoleService } from '../../../services/role.service';
+import { AuthService } from '../../../services/auth.service';
+import { BackendRoleResponse } from '../../../models/BackendRoleResponse';
 
 @Component({
   selector: 'app-activity-panel',
@@ -77,17 +81,17 @@ import { ActivityService } from '../../../services/activity.service';
 export class ActivityPanel implements OnInit, OnChanges, OnDestroy {
   /**
    * INPUT: activityId
-   * 
+   *
    * Identificador de la actividad a editar. Cuando el Dashboard asigna un valor,
    * el panel automáticamente carga esa actividad en el formulario (modo edición).
-   * 
+   *
    * Si se establece en null, el panel vuelve a modo crear.
    */
   @Input() activityId: number | null = null;
 
   /**
    * OUTPUT: close
-   * 
+   *
    * Evento emitido cuando el usuario hace clic en el botón de cerrar (X).
    * El Dashboard escucha este evento para ocultar el panel.
    */
@@ -95,27 +99,48 @@ export class ActivityPanel implements OnInit, OnChanges, OnDestroy {
 
   /**
    * INYECCIÓN DE DEPENDENCIAS
-   * 
+   *
    * Utiliza inject() de Angular 16+ para inyección standalone.
    */
   private fb = inject(FormBuilder);
   private service = inject(ActivityService);
+  private activeProcessService = inject(ActiveProcessService);
+  private roleService = inject(RoleService);
+  private authService = inject(AuthService);
 
   /**
    * STREAM DE DATOS REACTIVO
-   * 
+   *
    * Observable que emite la lista completa de actividades cada vez que cambia el store.
    * El template puede suscribirse con el pipe async o este componente puede mantener
    * un snapshot local.
    */
-  readonly activities$: Observable<Activity[]> = this.service.list$;
+  readonly activities$: Observable<Activity[]> = this.service.list$.pipe(
+    map((activities: Activity[]) => {
+      const activeProcessId = this.activeProcessService.getActiveProcessId();
+
+      if (!activeProcessId) {
+        console.warn('[ActivityPanel] No hay proceso activo, mostrando todas las activities');
+        return activities;
+      }
+
+      // Filtrar solo activities del proceso activo
+      const filtered = activities.filter(a =>
+        a.processId === activeProcessId ||
+        a.process?.id === activeProcessId
+      );
+
+      console.log(`[ActivityPanel] Mostrando ${filtered.length}/${activities.length} activities del proceso ${activeProcessId}`);
+      return filtered;
+    })
+  );
 
   /**
    * ESTADO LOCAL CON SIGNALS
-   * 
+   *
    * - isEditing: true cuando hay una actividad cargada para editar
    * - selected: actividad actualmente en edición (null si modo crear)
-   * 
+   *
    * Las signals permiten reactividad granular y mejor rendimiento que BehaviorSubject
    * para estado de UI local.
    */
@@ -124,7 +149,7 @@ export class ActivityPanel implements OnInit, OnChanges, OnDestroy {
 
   /**
    * SNAPSHOT LOCAL Y SUSCRIPCIÓN
-   * 
+   *
    * - snapshot: copia de la última lista emitida por activities$, necesaria para
    *   buscar actividades por id cuando cambia el @Input activityId
    * - sub: referencia a la suscripción para limpiarla en ngOnDestroy
@@ -133,10 +158,18 @@ export class ActivityPanel implements OnInit, OnChanges, OnDestroy {
   private sub?: Subscription;
 
   /**
+   * ROLES DISPONIBLES
+   *
+   * Lista de roles de la compañía del usuario actual, cargados para mostrar
+   * en el selector de rol al crear/editar actividades.
+   */
+  roles: BackendRoleResponse[] = [];
+
+  /**
    * FORMULARIO REACTIVO
-   * 
+   *
    * Configurado con FormBuilder y validaciones sincrónicas.
-   * 
+   *
    * CAMPOS:
    * - name: string requerido, mínimo 2 caracteres
    * - description: string opcional
@@ -144,7 +177,7 @@ export class ActivityPanel implements OnInit, OnChanges, OnDestroy {
    * - width, height: dimensiones del rectángulo visual
    * - processId: number | undefined, referencia al proceso padre
    * - roleId: number | undefined, rol asignado a la actividad
-   * 
+   *
    * NOTA SOBRE OPCIONALES:
    * Los campos opcionales usan number | undefined (NO null) con nonNullable:true.
    * Esto previene valores null que pueden causar problemas de tipado.
@@ -165,14 +198,14 @@ export class ActivityPanel implements OnInit, OnChanges, OnDestroy {
 
   /**
    * CICLO DE VIDA: INICIALIZACIÓN
-   * 
+   *
    * Se ejecuta una vez al crear el componente.
-   * 
+   *
    * COMPORTAMIENTO:
    * 1. Suscribe al stream de actividades
    * 2. Mantiene actualizado el snapshot local cada vez que el stream emite
    * 3. Llama a applyInputSelection() por si ya hay un activityId inicial
-   * 
+   *
    * PROPÓSITO DEL SNAPSHOT:
    * El stream activities$ es asíncrono, pero necesitamos acceso síncrono para
    * resolver el @Input activityId cuando cambia. El snapshot permite buscar
@@ -183,13 +216,46 @@ export class ActivityPanel implements OnInit, OnChanges, OnDestroy {
       this.snapshot = list ?? [];
       this.applyInputSelection();
     });
+    this.loadRoles();
+  }
+
+  /**
+   * Carga los roles disponibles de la compañía del usuario actual.
+   *
+   * COMPORTAMIENTO:
+   * 1. Obtiene el usuario actual del AuthService
+   * 2. Extrae el companyId del usuario
+   * 3. Llama a roleService.getRolesByCompanyId() para obtener los roles
+   * 4. Almacena los roles en this.roles para usar en el template
+   *
+   * USO:
+   * Los roles se muestran en un select en el formulario para que el usuario
+   * pueda asignar un rol a la actividad al crearla o editarla.
+   */
+  private loadRoles(): void {
+    const currentUser = this.authService.getUser();
+    const companyId = currentUser?.company.id;
+    
+    if (typeof companyId === 'number') {
+      this.roleService.getRolesByCompanyId(companyId).subscribe({
+        next: (data: BackendRoleResponse[]) => {
+          this.roles = data;
+          console.log('[ActivityPanel] Roles cargados:', data.length);
+        },
+        error: (err) => {
+          console.error('[ActivityPanel] Error cargando roles:', err);
+        }
+      });
+    } else {
+      console.warn('[ActivityPanel] No se pudo obtener companyId del usuario');
+    }
   }
 
   /**
    * CICLO DE VIDA: DETECCIÓN DE CAMBIOS EN INPUTS
-   * 
+   *
    * Se ejecuta cada vez que el padre modifica el @Input activityId.
-   * 
+   *
    * COMPORTAMIENTO:
    * Si detecta cambio en activityId, intenta cargar la actividad correspondiente
    * en el formulario (modo edición). Si activityId es null, vuelve a modo crear.
@@ -202,12 +268,12 @@ export class ActivityPanel implements OnInit, OnChanges, OnDestroy {
 
   /**
    * CICLO DE VIDA: LIMPIEZA
-   * 
+   *
    * Se ejecuta al destruir el componente.
-   * 
+   *
    * COMPORTAMIENTO:
    * Cancela la suscripción al stream para prevenir memory leaks.
-   * 
+   *
    * IMPORTANCIA:
    * Sin esta limpieza, la suscripción seguiría activa aunque el componente
    * ya no esté en el DOM, consumiendo memoria y procesamiento innecesarios.
@@ -218,7 +284,7 @@ export class ActivityPanel implements OnInit, OnChanges, OnDestroy {
 
   /**
    * Aplica la selección basada en el @Input activityId.
-   * 
+   *
    * COMPORTAMIENTO:
    * 1. Si activityId es null:
    *    - Si estaba en modo edición, resetea el formulario a modo crear
@@ -227,12 +293,12 @@ export class ActivityPanel implements OnInit, OnChanges, OnDestroy {
    *    - Busca la actividad en el snapshot local
    *    - Si la encuentra, llama a edit() para cargarla en el formulario
    *    - Si no la encuentra, no hace nada (puede ser que aún no esté en el snapshot)
-   * 
+   *
    * INVOCACIÓN:
    * - Llamado automáticamente en ngOnInit (por si hay activityId inicial)
    * - Llamado automáticamente en ngOnChanges (cuando cambia activityId)
    * - Llamado cada vez que el snapshot se actualiza (por si la actividad recién llegó)
-   * 
+   *
    * SINCRONIZACIÓN:
    * Este método resuelve el problema de sincronización entre el @Input (síncrono)
    * y el stream de actividades (asíncrono).
@@ -248,11 +314,11 @@ export class ActivityPanel implements OnInit, OnChanges, OnDestroy {
 
   /**
    * Retorna el id de la actividad en edición o undefined si está en modo crear.
-   * 
+   *
    * RETORNO:
    * - number: id de la actividad seleccionada (modo editar)
    * - undefined: no hay actividad seleccionada (modo crear)
-   * 
+   *
    * USO TÍPICO:
    * El template usa este método para determinar el texto del botón submit:
    * ```html
@@ -265,11 +331,11 @@ export class ActivityPanel implements OnInit, OnChanges, OnDestroy {
 
   /**
    * Manejador del evento submit del formulario.
-   * 
+   *
    * COMPORTAMIENTO:
    * - Si hay una actividad en edición (editingId() retorna un número), llama a update()
    * - Si no hay actividad en edición (editingId() es undefined), llama a create()
-   * 
+   *
    * DELEGACIÓN:
    * Este método no contiene lógica propia, solo decide a qué método delegar.
    * Es el punto de entrada único desde el template (ngSubmit)="submit()".
@@ -280,33 +346,47 @@ export class ActivityPanel implements OnInit, OnChanges, OnDestroy {
 
   /**
    * Crea una nueva actividad en el servicio y resetea el formulario.
-   * 
+   *
    * VALIDACIÓN:
-   * Si el formulario no es válido, aborta sin hacer nada. Las validaciones
-   * visuales del template mostrarán los errores al usuario.
-   * 
+   * Si el formulario no es válido, aborta sin hacer nada.
+   *
    * COMPORTAMIENTO:
    * 1. Obtiene los valores del formulario con getRawValue()
    * 2. Construye un payload Omit<Activity, 'id'> (el id lo genera el backend)
    * 3. Establece status='active' por defecto
    * 4. Llama a service.create() con el payload
-   * 5. Si create() retorna Observable, suscribe y espera respuesta
-   * 6. Si create() retorna void, ejecuta directamente
-   * 7. Resetea el formulario a modo crear después de éxito
-   * 
-   * DUCK TYPING:
-   * Usa (as any) porque durante la transición mock → backend HTTP, create()
-   * puede retornar void o Observable<Activity>. Este patrón evita errores de
-   * tipado mientras se mantiene la flexibilidad.
-   * 
-   * RESETEO:
-   * resetForm() limpia el formulario y vuelve a modo crear, listo para
-   * crear otra actividad sin necesidad de cerrar/abrir el panel.
+   * 5. Suscribe al Observable con manejo completo de éxito y error
+   * 6. Resetea el formulario después de creación exitosa
+   *
+   * MANEJO DE ERRORES:
+   * Si el backend retorna error, muestra alerta al usuario y loggea en consola
+   * para facilitar debugging.
    */
   private create(): void {
     if (!this.form.valid) return;
 
     const raw = this.form.getRawValue();
+
+    // Obtener processId del formulario o del proceso activo
+    let processId = raw.processId;
+    if (!processId) {
+      const activeId = this.activeProcessService.getActiveProcessId();
+      processId = activeId ?? undefined;
+      if (!processId) {
+        console.error('No hay proceso activo');
+        console.error('Solución: Selecciona o crea un proceso desde el menú "Procesos" en la parte superior');
+        alert(
+          'No hay un proceso activo seleccionado\n\n' +
+          'Para crear activities, primero debes:\n' +
+          '1. Ir al menú "Procesos" (arriba)\n' +
+          '2. Seleccionar un proceso existente\n' +
+          '   O crear uno nuevo\n\n' +
+          'Luego podrás crear activities en el dashboard.'
+        );
+        return;
+      }
+    }
+
     const payload: Omit<Activity, 'id'> = {
       name: raw.name,
       description: raw.description,
@@ -314,43 +394,49 @@ export class ActivityPanel implements OnInit, OnChanges, OnDestroy {
       y: raw.y,
       width: raw.width,
       height: raw.height,
-      status: 'active', 
-      processId: raw.processId,
+      status: 'active',
+      processId: processId, // Ahora siempre tiene un valor
       roleId: raw.roleId,
     };
 
-    const maybe$ = (this.service as any).create?.(payload);
-    if (maybe$?.subscribe) {
-      maybe$.subscribe(() => this.resetForm());
-    } else {
-      (this.service as any).create?.(payload);
-      this.resetForm();
-    }
+    this.service.create(payload).subscribe({
+      next: (created) => {
+        console.log('Activity creada:', created.id, created.name);
+        // Cargar la activity recién creada en modo edición
+        // para que el usuario pueda seguir editándola
+        this.edit(created);
+      },
+      error: (err) => {
+        console.error('Error creando activity:', err);
+        console.error('Payload enviado:', payload);
+        alert('Error al crear activity. Verifica la consola para más detalles.');
+      }
+    });
   }
 
   /**
    * Carga una actividad en el formulario para editar.
-   * 
+   *
    * PARÁMETROS:
    * - item: Actividad completa (con id) a editar
-   * 
+   *
    * COMPORTAMIENTO:
    * 1. Activa el modo edición con isEditing.set(true)
    * 2. Guarda la referencia a la actividad en selected
    * 3. Carga los valores en el formulario con patchValue()
    * 4. Usa operador nullish coalescing (??) para valores por defecto
-   * 
+   *
    * VALORES POR DEFECTO:
    * Si algún campo viene null/undefined, usa valores razonables:
    * - strings vacíos para name/description
    * - 100 para x/y (centrado relativo)
    * - 140x80 para width/height (tamaño estándar de actividad)
    * - undefined para processId/roleId (campos opcionales)
-   * 
+   *
    * INVOCACIÓN:
    * - Llamado por applyInputSelection() cuando el padre envía un activityId
    * - Puede ser llamado directamente desde el template (lista de actividades)
-   * 
+   *
    * EFECTO EN EL TEMPLATE:
    * Al cambiar isEditing y selected, el template reactivamente:
    * - Cambia el título del panel de "Nueva Actividad" a "Editar Actividad"
@@ -375,30 +461,24 @@ export class ActivityPanel implements OnInit, OnChanges, OnDestroy {
 
   /**
    * Actualiza la actividad en edición con los valores del formulario.
-   * 
+   *
    * VALIDACIONES:
    * - Si no hay actividad seleccionada (selected() es null), aborta
    * - Si el formulario no es válido, aborta
-   * 
+   *
    * COMPORTAMIENTO:
    * 1. Obtiene la actividad actual de selected()
    * 2. Obtiene los valores del formulario con getRawValue()
-   * 3. Hace merge de la actividad existente con los nuevos valores (spread operator)
+   * 3. Hace merge de la actividad existente con los nuevos valores
    * 4. Llama a service.update() con el objeto merged
-   * 5. Si update() retorna Observable, suscribe y espera respuesta
-   * 6. Si update() retorna void, ejecuta directamente
-   * 7. Resetea el formulario a modo crear después de éxito
-   * 
+   * 5. Suscribe al Observable con manejo completo de éxito y error
+   * 6. Resetea el formulario después de actualización exitosa
+   *
    * PRESERVACIÓN DEL ID:
-   * El merge { ...current, ...campos } preserva el id y otros campos que no
-   * están en el formulario (como createdAt, updatedAt si existieran).
-   * 
-   * DUCK TYPING:
-   * Mismo patrón que create() para manejar la dualidad Observable/void.
-   * 
-   * RESETEO:
-   * Después de actualizar, vuelve a modo crear. Esto permite al usuario
-   * crear una nueva actividad inmediatamente si lo desea.
+   * El merge preserva el id y otros campos que no están en el formulario.
+   *
+   * MANEJO DE ERRORES:
+   * Si el backend retorna error, muestra alerta y loggea en consola.
    */
   private update(): void {
     const current = this.selected();
@@ -417,40 +497,43 @@ export class ActivityPanel implements OnInit, OnChanges, OnDestroy {
       roleId: raw.roleId,
     };
 
-    const maybe$ = (this.service as any).update?.(merged);
-    if (maybe$?.subscribe) {
-      maybe$.subscribe(() => this.resetForm());
-    } else {
-      (this.service as any).update?.(merged);
-      this.resetForm();
-    }
+    this.service.update(merged).subscribe({
+      next: (updated) => {
+        console.log('Activity actualizada:', updated.id, updated.name);
+        this.resetForm();
+      },
+      error: (err) => {
+        console.error('Error actualizando activity:', err);
+        alert('Error al actualizar activity. Verifica la consola para más detalles.');
+      }
+    });
   }
 
   /**
    * Elimina una actividad por su identificador.
-   * 
+   *
    * PARÁMETROS:
    * - id: Identificador de la actividad a eliminar (puede ser undefined)
-   * 
+   *
    * VALIDACIÓN:
    * Si id es null o undefined, aborta sin hacer nada.
-   * 
+   *
    * COMPORTAMIENTO:
    * 1. Llama a service.delete() con el id
    * 2. Si delete() retorna Observable, suscribe (sin callback necesario)
    * 3. Si delete() retorna void, ejecuta directamente
    * 4. Si la actividad eliminada es la que está en edición, resetea el formulario
-   * 
+   *
    * AUTO-LIMPIEZA:
    * Si el usuario elimina la actividad que está editando, el formulario se
    * limpia automáticamente para evitar quedarse en un estado inconsistente.
-   * 
+   *
    * INVOCACIÓN:
    * Típicamente llamado desde el template con el id de un item de la lista:
    * ```html
    * <button (click)="remove(activity.id)">Eliminar</button>
    * ```
-   * 
+   *
    * DUCK TYPING:
    * Mismo patrón que create() y update() para manejar Observable/void.
    */
@@ -467,16 +550,16 @@ export class ActivityPanel implements OnInit, OnChanges, OnDestroy {
 
   /**
    * Cancela la edición actual y vuelve a modo crear.
-   * 
+   *
    * COMPORTAMIENTO:
    * Llama a resetForm() para limpiar el formulario y el estado.
-   * 
+   *
    * INVOCACIÓN:
    * Botón "Cancelar" visible solo en modo edición:
    * ```html
    * <button *ngIf="isEditing()" (click)="cancel()">Cancelar</button>
    * ```
-   * 
+   *
    * DIFERENCIA CON onClose():
    * - cancel() resetea el formulario pero NO cierra el panel
    * - onClose() cierra el panel pero NO resetea el formulario
@@ -487,17 +570,17 @@ export class ActivityPanel implements OnInit, OnChanges, OnDestroy {
 
   /**
    * Emite evento para que el Dashboard oculte este panel.
-   * 
+   *
    * COMPORTAMIENTO:
    * Emite el evento close sin payload. El Dashboard escucha este evento
    * y oculta el panel (típicamente con *ngIf o [class.hidden]).
-   * 
+   *
    * INVOCACIÓN:
    * Botón "X" en la esquina superior derecha del panel:
    * ```html
    * <button class="close-btn" (click)="onClose()">✕</button>
    * ```
-   * 
+   *
    * NO RESETEA:
    * Este método intencionalmente NO llama a resetForm(). Si el usuario
    * cierra el panel y lo vuelve a abrir, verá el mismo estado. Para limpiar
@@ -509,18 +592,18 @@ export class ActivityPanel implements OnInit, OnChanges, OnDestroy {
 
   /**
    * Resetea el formulario a su estado inicial (modo crear).
-   * 
+   *
    * COMPORTAMIENTO:
    * 1. Desactiva el modo edición: isEditing.set(false)
    * 2. Limpia la selección: selected.set(null)
    * 3. Resetea todos los campos del formulario a sus valores por defecto
-   * 
+   *
    * VALORES POR DEFECTO:
    * - name, description: strings vacíos
    * - x: 100, y: 100 (posición inicial en canvas)
    * - width: 140, height: 80 (dimensiones estándar)
    * - processId, roleId: undefined (sin asignación)
-   * 
+   *
    * INVOCACIÓN INTERNA:
    * Llamado por:
    * - create() después de crear exitosamente
@@ -528,7 +611,7 @@ export class ActivityPanel implements OnInit, OnChanges, OnDestroy {
    * - cancel() cuando el usuario cancela la edición
    * - remove() si se elimina la actividad en edición
    * - applyInputSelection() si activityId cambia a null
-   * 
+   *
    * EFECTO EN EL TEMPLATE:
    * Al cambiar isEditing y selected, el template reactivamente vuelve a
    * mostrar el título "Nueva Actividad" y el botón "Crear".

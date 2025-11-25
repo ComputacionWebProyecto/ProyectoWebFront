@@ -1,22 +1,19 @@
 import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { User } from '../models/User';
-import { catchError, map, Observable, pipe, switchMap, tap, throwError } from 'rxjs';
+import { catchError, map, Observable, of, switchMap, tap, throwError } from 'rxjs';
 import { Role } from '../models/Role';
 import { Process } from '../models/Process';
 import { Registration } from '../models/Registration';
 import { LoginRequest } from '../models/Login';
 import { HttpClient } from '@angular/common/http';
-import { BackendUserResponse } from '../models/BackendUserResponse';
 import { ProcessService } from './process.service';
-import { BackendProcessResponse } from '../models/BackendProcessResponse';
-
+import { BackendUserSafeResponse } from '../models/BackendUserSafeResponse';
+import { AuthorizedResponse } from '../models/AuthorizedResponse';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
-
   role: Role = new Role('administrador', 'usuario administrador total de la compañia');
   process: Process = new Process('Proceso inicial', 'Primer proceso de la compañia');
 
@@ -24,35 +21,38 @@ export class AuthService {
     @Inject(PLATFORM_ID) private platformId: Object,
     private http: HttpClient,
     private processService: ProcessService
-  ) {
+  ) { }
 
-  }
-  registrar(registrationData: Registration): Observable<BackendUserResponse> {
-    return this.http.post<BackendUserResponse>('http://localhost:8080/api/register', registrationData).pipe(
-      tap(backendUser => {
-        const user = new User(
-          backendUser.nombre,
-          backendUser.correo,
-          backendUser.contrasena,
-          backendUser.company.id,
-          backendUser.role?.id,
-          backendUser.id
-        );
+  registrar(registrationData: Registration): Observable<AuthorizedResponse> {
+    return this.http.post<AuthorizedResponse>('http://localhost:8080/api/register', registrationData).pipe(
+      tap(authorizedUser => {
         if (isPlatformBrowser(this.platformId)) {
-          localStorage.setItem('user', JSON.stringify(user));
+          if (authorizedUser.token) {
+            localStorage.setItem('token', authorizedUser.token);
+            console.log('Token JWT guardado en localStorage');
+          } else {
+            console.warn('El backend no retornó token JWT');
+          }
+          console.log("usuario compañia: ", authorizedUser.user.company.id);
         }
       }),
-      switchMap(backendUser => {
-        if (!backendUser.company?.id) {
-          return throwError(() => new Error('ID de empresa no disponible'));
+      switchMap(authorizedUser => {
+        if (!authorizedUser.user.company.id) {
+          return [authorizedUser];
         }
-        return this.processService.createDefaultProcess(backendUser.company.id).pipe(
-          tap(process => {
-            if (isPlatformBrowser(this.platformId) && process.id) {
-              localStorage.setItem('activeProcessId', process.id.toString());
+
+        return this.processService.getProcessesByCompanyId(authorizedUser.user.company.id).pipe(
+          tap(processes => {
+            if (isPlatformBrowser(this.platformId) && processes.length > 0) {
+              localStorage.setItem('activeProcessId', processes[0].id!.toString());
+              console.log('Proceso activo guardado:', processes[0].id);
             }
           }),
-          map(() => backendUser)
+          map(() => authorizedUser),
+          catchError(processError => {
+            console.log('El usuario puede cargar los procesos después desde el dashboard');
+            return [authorizedUser];
+          })
         );
       }),
       catchError(error => {
@@ -62,25 +62,39 @@ export class AuthService {
     );
   }
 
-  login(credentials: LoginRequest): Observable<BackendUserResponse> {
-    return this.http.post<BackendUserResponse>('http://localhost:8080/api/login', credentials).pipe(
-      tap(response => {
+  login(credentials: LoginRequest): Observable<AuthorizedResponse> {
+    return this.http.post<AuthorizedResponse>('http://localhost:8080/api/login', credentials).pipe(
+      tap(authorizedUser => {
         if (isPlatformBrowser(this.platformId)) {
-          localStorage.setItem('user', JSON.stringify(response));
+          if (authorizedUser.token) {
+            localStorage.setItem('token', authorizedUser.token);
+            console.log('Token JWT guardado en localStorage');
+          } else {
+            console.warn('El backend no retornó token JWT');
+          }
+
+          // Guardar el usuario completo
+          localStorage.setItem('user', JSON.stringify(authorizedUser.user));
+          console.log("usuario guardado: ", authorizedUser.user)
         }
       }),
-      switchMap(response => {
-        if (!response.company?.id) {
-          return throwError(() => new Error('ID de empresa no disponible'));
+      switchMap(authorizedUser => {
+        if (!authorizedUser.user.company.id) {
+          console.warn('Login exitoso pero sin ID de empresa');
+          return [authorizedUser];
         }
-        return this.processService.getProcessesByCompanyId(response.company.id).pipe(
+        return this.processService.getProcessesByCompanyId(authorizedUser.user.company.id).pipe(
           tap(processes => {
             if (isPlatformBrowser(this.platformId) && processes.length > 0) {
-              console.log('Proceso activo: ', processes[0]);
+              console.log('Proceso activo:', processes[0]);
               localStorage.setItem('activeProcessId', processes[0].id!.toString());
             }
           }),
-          map(() => response)
+          map(() => authorizedUser),
+          catchError(processError => {
+            console.log('El usuario puede cargar los procesos después desde el dashboard');
+            return [authorizedUser];
+          })
         );
       }),
       catchError(error => {
@@ -90,14 +104,16 @@ export class AuthService {
     );
   }
 
-
-  setUser(user: BackendUserResponse) {
+  setUser(user: BackendUserSafeResponse) {
     if (isPlatformBrowser(this.platformId)) {
+      if ((user as any).token) {
+        localStorage.setItem('token', (user as any).token);
+      }
       localStorage.setItem('user', JSON.stringify(user));
     }
   }
 
-  getUser(): BackendUserResponse | null {
+  getUser(): BackendUserSafeResponse | null {
     if (isPlatformBrowser(this.platformId)) {
       const data = localStorage.getItem('user');
       return data ? JSON.parse(data) : null;
@@ -105,16 +121,71 @@ export class AuthService {
     return null;
   }
 
+  /**
+   * NUEVO: Método para obtener el token actual
+   */
+  getToken(): string | null {
+    if (isPlatformBrowser(this.platformId)) {
+      return localStorage.getItem('token');
+    }
+    return null;
+  }
+
   logout() {
     if (isPlatformBrowser(this.platformId)) {
       localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      localStorage.removeItem('activeProcessId');
     }
   }
 
   isLoggedIn(): boolean {
     if (!isPlatformBrowser(this.platformId)) return false;
     const user = localStorage.getItem('user');
-    return !!user;
+    const token = localStorage.getItem('token');
+    return !!(user && token);
   }
+  validateToken(): Observable<boolean> {
+    return this.http.get<void>('http://localhost:8080/api/auth/validate').pipe(
+      map(() => true),
+      catchError(() => {
+        console.warn('Token inválido o expirado');
+        return of(false);
+      })
+    );
+  }
+  renewToken(): Observable<AuthorizedResponse> {
+    return this.http.post<AuthorizedResponse>('http://localhost:8080/api/auth/renew-token', {}).pipe(
+      tap(response => {
+        if (isPlatformBrowser(this.platformId)) {
+          if (response.token) {
+            localStorage.setItem('token', response.token);
+            console.log('Token renovado exitosamente');
+          }
+          if (response.user) {
+            localStorage.setItem('user', JSON.stringify(response.user));
+          }
+        }
+      }),
+      catchError(error => {
+        console.error('Error renovando token:', error);
+        this.logout();
+        return throwError(() => error);
+      })
+    );
+  }
+  startTokenRenewal(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    // Renovar cada 60 minutos (el token dura 72 horas)
+    const renewalInterval = 60 * 60 * 1000; // 1 hora
 
+    setInterval(() => {
+      if (this.isLoggedIn()) {
+        this.renewToken().subscribe({
+          next: () => console.log('Token renovado automáticamente'),
+          error: (err) => console.error('Error en renovación automática:', err)
+        });
+      }
+    }, renewalInterval);
+  }
 }

@@ -5,6 +5,7 @@ import { Role } from '../../../models/Role';
 import { RoleList } from '../role-list/role-list';
 import { RoleForm } from '../role-form/role-form';
 import { AuthService } from '../../../services/auth.service';
+import { BackendUserResponse } from '@/app/models/BackendUserResponse';
 
 @Component({
   selector: 'app-role-panel',
@@ -21,17 +22,25 @@ export class RolePanel implements OnInit {
   current: Role = new Role('', '');
 
   mode: 'none' | 'edit' | 'delete' | 'consult' = 'none';
-  constructor(private roleService: RoleService, private authService: AuthService) {}
+  constructor(private roleService: RoleService, private authService: AuthService) { }
 
   ngOnInit(): void {
     this.loadRoles();
   }
 
   loadRoles() {
-    this.roleService.getRoles().subscribe({
-      next: (data: Role[]) => this.roles = data,
-      error: (err: any) => console.error('Error loading roles', err)
-    });
+    const user = this.authService.getUser();
+    if (user?.company.id !== undefined) {
+      this.roleService.getRolesByCompanyId(user.company.id).subscribe({
+        next: (data: Role[]) => {
+          this.roles = data;
+          console.log('Roles cargados:', data.length);
+        },
+        error: (err: any) => console.error('Error loading roles', err)
+      });
+    } else {
+      console.error('No company id found for user');
+    }
   }
 
   openCreateForm() {
@@ -54,7 +63,7 @@ export class RolePanel implements OnInit {
 
   saveRole(role: Role) {
     const user = this.authService.getUser();
-    role.companyId = user?.company?.id;
+    role.companyId = user?.company.id;
 
     const request$ = role.id
       ? this.roleService.updateRole(role.id, role)
@@ -79,16 +88,16 @@ export class RolePanel implements OnInit {
         console.error('Error deleting role', err);
       }
     });
-    }
-  enterEditMode()   { 
-      this.mode = this.mode === 'edit'   ? 'none' : 'edit'; 
-    }
-  enterDeleteMode() { 
-      this.mode = this.mode === 'delete' ? 'none' : 'delete';
-    }
-  enterConsultMode(){ 
-      this.mode = this.mode === 'consult'? 'none' : 'consult'; 
-    }
+  }
+  enterEditMode() {
+    this.mode = this.mode === 'edit' ? 'none' : 'edit';
+  }
+  enterDeleteMode() {
+    this.mode = this.mode === 'delete' ? 'none' : 'delete';
+  }
+  enterConsultMode() {
+    this.mode = this.mode === 'consult' ? 'none' : 'consult';
+  }
 
 
 

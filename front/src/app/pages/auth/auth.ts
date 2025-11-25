@@ -28,7 +28,7 @@ export class Auth implements OnInit {
     this.authService.registrar(data).subscribe({
       next: (createdUser) => {
         console.log('Datos de registro', createdUser);
-        this.authService.setUser(createdUser);
+        this.authService.setUser(createdUser.user);
         this.router.navigate(['dashboard']);
       },
       error: (err) => {
@@ -40,9 +40,9 @@ export class Auth implements OnInit {
   onLoginSubmit(credentials: LoginRequest) {
     console.log('Intentando login con credenciales:', credentials);
     this.authService.login(credentials).subscribe({
-      next: (response: BackendUserResponse) => {
+      next: (response) => {
         console.log('Login exitoso:', response);
-        this.authService.setUser(response);
+        this.authService.setUser(response.user);
         this.router.navigate(['/dashboard']);
       },
       error: (err) => {

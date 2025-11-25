@@ -17,30 +17,27 @@
 
   <!-- Formulario -->
   <form [formGroup]="form" (ngSubmit)="submit()" class="form" novalidate>
-    <!-- Proceso (opcional) -->
+    <!-- Proceso (se toma del proceso activo, no editable) -->
     <div class="row">
-      <label for="processId">Proceso (opcional)</label>
-      <input
-        id="processId"
-        type="number"
-        formControlName="processId"
-        placeholder="Ej: 10"
-        min="1"
-      />
-      <small class="error" *ngIf="form.get('processId')?.touched && form.get('processId')?.errors?.['min']">
-        Debe ser &ge; 1.
+      <label>Proceso</label>
+      <div class="readonly-field">
+        <strong>{{ activeProcessName || 'sin proceso activo' }}</strong>
+        <small class="muted block">(El proceso se asigna automáticamente)</small>
+      </div>
+      <small class="error" *ngIf="!activeProcessId">
+        No hay proceso activo. Abre "My processes" y selecciona uno antes de crear edges.
       </small>
     </div>
 
     <!-- Desde (select mixto) -->
     <div class="row">
       <label for="fromMixed">Desde</label>
-      
+
       <!-- DEBUG: Mostrar conteo -->
       <small class="text-xs text-gray-500 mb-1 block">
         Actividades: {{ activitiesSnapshot.length || 0 }} | Gateways: {{ gatewaysSnapshot.length || 0 }}
       </small>
-      
+
       <!-- Un solo select con dos grupos; el (change) actualiza fromType/fromId -->
       <select id="fromMixed" (change)="onSelectFromKindId($event)" aria-required="true">
         <option [value]="''" disabled [selected]="!form.value.fromType || !form.value.fromId">
@@ -130,7 +127,7 @@
     </div>
 
     <div class="actions">
-      <button type="submit" [disabled]="form.invalid">
+      <button type="submit" [disabled]="form.invalid || !activeProcessId">
         {{ editingId() ? 'Actualizar' : 'Crear' }}
       </button>
       <button type="button" *ngIf="editingId()" (click)="cancel()">Cancelar</button>

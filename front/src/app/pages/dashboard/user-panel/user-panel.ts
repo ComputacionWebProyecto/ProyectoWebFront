@@ -32,7 +32,7 @@ export class UserPanel implements OnInit {
   loadUsers() {
     const user = this.authService.getUser();
     console.log("datos usuario: ", user);
-    const companyId = user?.company?.id;
+    const companyId = user?.company.id;
     const currUserId = user?.id;
     if (typeof companyId === 'number' && typeof currUserId === 'number') {
       this.userService.getUsersByCompanyId(companyId, currUserId).subscribe({
