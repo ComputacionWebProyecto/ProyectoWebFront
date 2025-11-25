@@ -87,41 +87,41 @@
     </div>
   </form>
 
-  <!-- Lista de gateways CON ICONOS -->
-  <ul class="list" *ngIf="(gateways$ | async) as items; else emptyState">
-    <li *ngFor="let g of items; trackBy: trackById">
-      <div class="item-main">
-        <div class="flex items-center gap-2">
-          <!-- Icono según tipo -->
-          <ng-container [ngSwitch]="g.type">
-            <app-decision 
-              *ngSwitchCase="'decision'" 
-              [size]="20"
-              class="text-green-400"
-            />
-            <app-exclusive 
-              *ngSwitchCase="'exclusive'" 
-              [size]="20"
-              class="text-amber-400"
-            />
-            <app-parallel 
-              *ngSwitchCase="'parallel'" 
-              [size]="20"
-              class="text-blue-400"
-            />
-            <span *ngSwitchDefault class="text-slate-500">◇</span>
-          </ng-container>
-          
-          <strong class="truncate">#{{ g.id }} — {{ getGatewayLabel(g.type) }}</strong>
-        </div>
-        <span class="muted">&nbsp;({{ g.status }})</span>
+  <!-- Lista de gateways CON ICONOS DINÁMICOS -->
+<ul class="list" *ngIf="(gateways$ | async) as items; else emptyState">
+  <li *ngFor="let g of items; trackBy: trackById">
+    <div class="item-main">
+      <div class="flex items-center gap-2">
+        <!-- 🎯 ESTE ICONO CAMBIA AUTOMÁTICAMENTE SEGÚN g.type -->
+        <ng-container [ngSwitch]="g.type">
+          <app-decision 
+            *ngSwitchCase="'decision'" 
+            [size]="20"
+            class="text-green-400"
+          />
+          <app-exclusive 
+            *ngSwitchCase="'exclusive'" 
+            [size]="20"
+            class="text-amber-400"
+          />
+          <app-parallel 
+            *ngSwitchCase="'parallel'" 
+            [size]="20"
+            class="text-blue-400"
+          />
+          <span *ngSwitchDefault class="text-slate-500">◇</span>
+        </ng-container>
+        
+        <strong class="truncate">#{{ g.id }} — {{ getGatewayLabel(g.type) }}</strong>
       </div>
-      <div class="item-actions">
-        <button type="button" (click)="edit(g)">Editar</button>
-        <button type="button" (click)="remove(g.id)">Eliminar</button>
-      </div>
-    </li>
-  </ul>
+      <span class="muted">&nbsp;({{ g.status }})</span>
+    </div>
+    <div class="item-actions">
+      <button type="button" (click)="edit(g)">Editar</button>
+      <button type="button" (click)="remove(g.id)">Eliminar</button>
+    </div>
+  </li>
+</ul>
 
   <ng-template #emptyState>
     <p class="text-sm text-slate-500 mt-2">Aún no hay gateways.</p>

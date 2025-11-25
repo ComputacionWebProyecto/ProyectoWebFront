@@ -199,9 +199,9 @@ export class GatewayPanel implements OnInit, OnChanges, OnDestroy {
    * - (X): Exclusivo - similar a decisión pero con semántica XOR
    */
   readonly gatewayTypes = [
-    { value: 'decision', label: 'Decisión', icon: 'decision' },
-    { value: 'parallel', label: 'Paralelo', icon: 'parallel' },
-    { value: 'exclusive', label: 'Exclusivo', icon: 'exclusive' },
+    { value: 'decision-gateway', label: 'Decisión', icon: 'decision' },
+    { value: 'parallel-gateway', label: 'Paralelo', icon: 'parallel' },
+    { value: 'exclusive-gateway', label: 'Exclusivo', icon: 'exclusive' },
   ];
 
   /**
@@ -491,16 +491,20 @@ export class GatewayPanel implements OnInit, OnChanges, OnDestroy {
     if (!current || !current.id) return;
 
     const raw = this.form.getRawValue();
-
     const merged: Gateway = {
       ...current,
-      type: raw.type!,
+      type: raw.type!,      
       status: raw.status!,
       processId: raw.processId ?? undefined,
     };
 
+    console.log('[GatewayPanel] Actualizando gateway:', merged);
+
     this.service.update(merged).subscribe({
-      next: () => this.reset(),
+      next: (updated) => {
+        console.log('[GatewayPanel] Gateway actualizado exitosamente:', updated);
+        this.reset();
+      },
       error: (err) => console.error('[GatewayPanel] Error al actualizar:', err),
     });
   }

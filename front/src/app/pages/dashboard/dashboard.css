@@ -258,3 +258,49 @@
 
 /* Transición suave de layout general */
 .flex-1 { transition: margin-left 0.3s ease; }
+
+/* Wrapper del gateway con icono dinámico */
+.gateway-icon-wrapper {
+  position: relative;
+  width: 60px;
+  height: 60px;
+}
+
+/* Fondo del rombo (siempre igual) */
+.gateway-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+/* Overlay del icono dinámico (centrado sobre el rombo) */
+.gateway-icon-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+/* Colores para los iconos */
+.text-blue-600 {
+  color: #2563eb;
+}
+
+.text-amber-600 {
+  color: #d97706;
+}
+
+/* Ajuste para el icono pequeño dentro del rombo */
+.gateway-icon-overlay app-decision,
+.gateway-icon-overlay app-exclusive,
+.gateway-icon-overlay app-parallel {
+  display: block;
+}
+/* Ocultar elementos small.text-red-500 en gateways */
+.gateway-container small.text-red-500 {
+  display: none !important;
+}

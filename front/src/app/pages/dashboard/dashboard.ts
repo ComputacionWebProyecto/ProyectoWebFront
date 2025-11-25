@@ -89,6 +89,9 @@ import { EdgePanel } from './edge/edge-panel';
 import { GatewayPanel } from './gateway/gateway-panel';
 import { Subscription } from 'rxjs';
 
+import { Decision } from './icons/decision/decision';
+import { Exclusive } from './icons/exclusive/exclusive';
+import { Parallel } from './icons/parallel/parallel';
 /**
  * BOARD COMPONENT INTERFACE
  *
@@ -186,6 +189,9 @@ interface BoardComponent {
   selector: 'app-dashboard',
   standalone: true,
   imports: [
+    Decision,
+    Exclusive,
+    Parallel,
     CommonModule,
     DropdownMenuComponent,
     HeaderDashboard,
@@ -1010,42 +1016,56 @@ export class Dashboard implements OnInit, OnDestroy {
    * para debugging.
    */
   private subscribeGatewaysStream(): void {
-    // Suscribirse a cambios del proceso activo
-    this.processSubscription = this.activeProcessService.activeProcessId$.subscribe(processId => {
-      if (processId === null) {
-        // No hay proceso activo, limpiar gateways
-        const nonGateways = this.boardComponents.filter(c => c.category !== 'gateway');
-        this.boardComponents = [...nonGateways];
-        this.cdr.detectChanges();
-        return;
-      }
+  // 🔥 CRÍTICO: Cancelar suscripción anterior si existe
+  this.processSubscription?.unsubscribe();
+  
+  this.processSubscription = this.activeProcessService.activeProcessId$.subscribe(processId => {
+    if (processId === null) {
+      console.log('[Dashboard] No hay proceso activo, limpiando gateways');
+      // Limpiar SOLO gateways, preservar activities y edges
+      const nonGateways = this.boardComponents.filter(c => c.category !== 'gateway');
+      this.boardComponents = [...nonGateways];
+      this.cdr.detectChanges();
+      return;
+    }
 
-      // Suscribirse a gateways del proceso activo
-      this.gatewayService.getByProcessId(processId).subscribe((gateways: Gateway[]) => {
-        console.log('[Dashboard] Gateways del proceso', processId, ':', gateways);
+    // 🔥 Suscribirse a gateways del proceso activo
+    this.gatewayService.getByProcessId(processId).subscribe((gateways: Gateway[]) => {
+      console.log('[Dashboard] Gateways recibidos del proceso', processId, ':', gateways);
 
-        // Filtrar solo activos
-        const activeGateways = gateways.filter(g => g.status === 'active' && g.id);
+      // Filtrar solo activos
+      const activeGateways = gateways.filter(g => g.status === 'active' && g.id);
+      console.log('[Dashboard] Gateways activos:', activeGateways.length);
 
-        // Convertir a BoardComponents
-        const gwLayer: BoardComponent[] = activeGateways.map(g => ({
+      // 🔥 REGENERAR completamente la capa de gateways
+      const gwLayer: BoardComponent[] = activeGateways.map(g => {
+        console.log('[Dashboard] Creando BoardComponent para gateway', g.id, 'tipo:', g.type);
+        return {
           id: `gateway-${g.id}`,
-          type: g.type,
+          type: g.type,  // 🔥 CRÍTICO: Esto se actualiza en cada emisión
           category: 'gateway',
           x: g.x ?? 100,
           y: g.y ?? 100,
           label: this.getComponentLabel(g.type),
           gatewayId: g.id,
-        }));
-
-        // Reemplazar solo la capa de gateways
-        const nonGateways = this.boardComponents.filter(c => c.category !== 'gateway');
-        this.boardComponents = [...gwLayer, ...nonGateways];
-
-        this.cdr.detectChanges();
+        };
       });
+
+      console.log('[Dashboard] gwLayer generado:', gwLayer.map(g => ({ id: g.id, type: g.type })));
+
+      // 🔥 REEMPLAZAR completamente gateways (NO preservar)
+      const nonGateways = this.boardComponents.filter(c => c.category !== 'gateway');
+      this.boardComponents = [...gwLayer, ...nonGateways];
+
+      console.log('[Dashboard] boardComponents actualizado:', this.boardComponents
+        .filter(c => c.category === 'gateway')
+        .map(g => ({ id: g.id, type: g.type }))
+      );
+
+      this.cdr.detectChanges();
     });
-  }
+  });
+}
 
   /**
    * Actualizar posición de un gateway en el servicio
