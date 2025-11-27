@@ -14,6 +14,7 @@ import { ActiveProcessService } from '../../../services/active-process.service';
 export class ProcessList {
   @Input() processes: Process[] = [];
   @Output() onDelete = new EventEmitter<number>();
+  @Output() onEdit = new EventEmitter<Process>();
 
   constructor(private activeProcessService: ActiveProcessService) { }
 
