@@ -67,12 +67,45 @@
 
             <ng-container [ngSwitch]="component.category">
               <!-- GATEWAY -->
+            
               <div *ngSwitchCase="'gateway'" class="gateway-container" (click)="openInspector('gateway', component)">
                 <div class="gateway gateway-decision">
-                  <svg width="60" height="60" viewBox="0 0 60 60">
-                    <path d="M30 5 L55 30 L30 55 L5 30 Z" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2.5"></path>
-                    <text x="30" y="38" text-anchor="middle" font-size="22" font-weight="bold" fill="#3B82F6">?</text>
-                  </svg>
+                  <!-- 🔧 CONTENEDOR DEL ICONO CON FONDO -->
+                  <div class="gateway-icon-wrapper">
+                    <svg width="60" height="60" viewBox="0 0 60 60" class="gateway-background">
+                      <!-- Rombo de fondo (siempre igual) -->
+                      <path d="M30 5 L55 30 L30 55 L5 30 Z" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2.5"></path>
+                    </svg>
+                    
+                    <!-- 🎨 ICONO DINÁMICO SEGÚN TIPO -->
+                     <!-- DEBUG: ver qué tipo tiene -->
+                    <small class="text-xs text-red-500">Tipo: {{component.type}}</small>
+                    <div class="gateway-icon-overlay">
+                      <ng-container [ngSwitch]="component.type">
+                        <app-decision 
+                          *ngSwitchCase="'decision-gateway'" 
+                          [size]="30"
+                          class="text-blue-600">
+                        </app-decision>
+                        
+                        <app-exclusive 
+                          *ngSwitchCase="'exclusive-gateway'" 
+                          [size]="30"
+                          class="text-amber-600">
+                        </app-exclusive>
+                        
+                        <app-parallel 
+                          *ngSwitchCase="'parallel-gateway'" 
+                          [size]="30"
+                          class="text-blue-600">
+                        </app-parallel>
+                        
+                        <!-- Fallback: símbolo genérico -->
+                        <span *ngSwitchDefault class="text-2xl font-bold text-blue-600">?</span>
+                      </ng-container>
+                    </div>
+                  </div>
+                  
                   <div class="component-label">
                     <span class="font-bold">#{{ component.gatewayId }}</span> — {{ component.label }}
                   </div>

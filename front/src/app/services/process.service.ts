@@ -26,7 +26,7 @@ export class ProcessService {
   }
 
   updateProcess(id: number, process: Process): Observable<Process> {
-    return this.http.put<Process>(this.baseUrl, process);
+    return this.http.put<Process>(`${this.baseUrl}/${id}`, process);
   }
 
   deleteProcess(id: number): Observable<any> {

@@ -7,6 +7,7 @@ import { ProcessForm } from '../process-form/process-form';
 import { AuthService } from '../../../services/auth.service';
 import { ActiveProcessService } from '../../../services/active-process.service';
 import { BackendProcessResponse } from '../../../models/BackendProcessResponse';
+import { NotificationService } from '../../../services/notification.service';
 
 
 @Component({
@@ -20,11 +21,13 @@ export class ProcessPanel implements OnInit {
   @Input() isOpen = false;
   processes: BackendProcessResponse[] = [];
   isCreating = false;
+  editingProcess: BackendProcessResponse | null = null;
 
   constructor(
     private processService: ProcessService,
     private authService: AuthService,
     private activeProcessService: ActiveProcessService,
+    private notificationService: NotificationService,
     private cdr: ChangeDetectorRef
   ) {}
 
@@ -50,6 +53,7 @@ export class ProcessPanel implements OnInit {
 
   openCreateForm() {
     this.isCreating = true;
+    this.editingProcess = null;
   }
 
   closePanel() {
@@ -58,36 +62,69 @@ export class ProcessPanel implements OnInit {
 
   cancelCreate() {
     this.isCreating = false;
+    this.editingProcess = null;
   }
 
-  saveProcess(newProcess: Process) {
+  saveProcess(processToSave: Process) {
     const user = this.authService.getUser();
     console.log('Datos usuario:', user);
 
-    // Obtener companyId del usuario
     const companyId = (user as any)?.companyId ?? (user as any)?.company?.id;
 
     if (!companyId) {
       console.error('No se pudo obtener companyId del usuario:', user);
-      alert('Error: No se pudo determinar la empresa del usuario.');
+      this.notificationService.showError('Error: No se pudo determinar la empresa del usuario.');
       return;
     }
 
-    newProcess.companyId = companyId;
-    console.log('Proceso a crear:', newProcess);
+    processToSave.companyId = companyId;
 
-    this.processService.createProcess(newProcess).subscribe({
-      next: (created) => {
-        this.isCreating = false;
-        this.loadProcesses();
-        // Seleccionar automáticamente el proceso recién creado
-        if (created?.id) {
-          this.activeProcessService.setActiveProcess(created.id);
-          console.log('Proceso creado y seleccionado automáticamente:', created.id);
+    if (this.editingProcess && processToSave.id) {
+      console.log('Proceso a actualizar:', processToSave);
+      this.processService.updateProcess(processToSave.id, processToSave).subscribe({
+        next: (updated) => {
+          this.notificationService.showSuccess('Proceso actualizado exitosamente');
+          this.isCreating = false;
+          this.editingProcess = null;
+          this.loadProcesses();
+          
+          // Si el proceso editado es el proceso activo, actualizar el nombre en el servicio
+          const activeProcessId = this.activeProcessService.getActiveProcessId();
+          if (activeProcessId === processToSave.id) {
+            this.activeProcessService.setActiveProcess(processToSave.id, processToSave.name);
+            console.log('Proceso activo actualizado en el header:', processToSave.name);
+          }
+        },
+        error: (err) => {
+          console.error('Error updating process', err);
+          this.notificationService.showError('Error al actualizar el proceso');
         }
-      },
-      error: (err) => console.error('Error creating process', err)
-    });
+      });
+    } else {
+      console.log('Proceso a crear:', processToSave);
+      this.processService.createProcess(processToSave).subscribe({
+        next: (created) => {
+          this.isCreating = false;
+          this.loadProcesses();
+          // Seleccionar automáticamente el proceso recién creado
+          if (created?.id) {
+            this.activeProcessService.setActiveProcess(created.id);
+            console.log('Proceso creado y seleccionado automáticamente:', created.id);
+          }
+        },
+        error: (err) => console.error('Error creating process', err)
+      });
+    }
+  }
+
+  editProcess(process: BackendProcessResponse) {
+    this.editingProcess = {
+      id: process.id,
+      name: process.name,
+      description: process.description,
+      company: process.company
+    };
+    this.isCreating = true;
   }
 
   deleteProcess(processId: number) {

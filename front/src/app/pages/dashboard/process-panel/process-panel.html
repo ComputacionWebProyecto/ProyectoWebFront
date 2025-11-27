@@ -22,12 +22,14 @@
 
       <app-process-list
         [processes]="processes"
-        (onDelete)="deleteProcess($event)">
+        (onDelete)="deleteProcess($event)"
+        (onEdit)="editProcess($event)">
       </app-process-list>
     </ng-container>
 
     <ng-template #formTemplate>
       <app-process-form
+        [processData]="editingProcess"
         (onSave)="saveProcess($event)"
         (onCancel)="cancelCreate()">
       </app-process-form>

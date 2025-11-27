@@ -8,13 +8,13 @@
       <span class="text-gray-800 font-semibold">{{ process.name }}</span>
       <div class="flex space-x-2">
         <!-- Editar -->
-        <button class="p-1 rounded-full hover:bg-blue-100">
+        <button class="p-1 rounded-full hover:bg-blue-100" (click)="onEdit.emit(process); $event.stopPropagation()">
           <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232a3 3 0 114.243 4.243L7.5 21H3v-4.5L15.232 5.232z" />
           </svg>
         </button>
         <!-- Eliminar -->
-        <button class="p-1 rounded-full hover:bg-red-100" (click)="onDelete.emit(process.id)">
+        <button class="p-1 rounded-full hover:bg-red-100" (click)="onDelete.emit(process.id); $event.stopPropagation()">
           <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>

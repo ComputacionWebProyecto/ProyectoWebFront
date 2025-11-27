@@ -6,6 +6,7 @@ import { RoleList } from '../role-list/role-list';
 import { RoleForm } from '../role-form/role-form';
 import { AuthService } from '../../../services/auth.service';
 import { BackendUserResponse } from '@/app/models/BackendUserResponse';
+import { NotificationService } from '../../../services/notification.service';
 
 @Component({
   selector: 'app-role-panel',
@@ -22,7 +23,11 @@ export class RolePanel implements OnInit {
   current: Role = new Role('', '');
 
   mode: 'none' | 'edit' | 'delete' | 'consult' = 'none';
-  constructor(private roleService: RoleService, private authService: AuthService) { }
+  constructor(
+    private roleService: RoleService, 
+    private authService: AuthService,
+    private notificationService: NotificationService
+  ) { }
 
   ngOnInit(): void {
     this.loadRoles();
@@ -84,7 +89,7 @@ export class RolePanel implements OnInit {
     this.roleService.deleteRole(roleId).subscribe({
       next: () => this.loadRoles(),
       error: (err) => {
-        alert('No se puede eliminar: el rol está en uso o el servidor lo rechazó.');
+        this.notificationService.showError('No se puede eliminar: el rol está en uso o el servidor lo rechazó.');
         console.error('Error deleting role', err);
       }
     });

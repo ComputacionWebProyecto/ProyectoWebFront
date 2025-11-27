@@ -1,5 +1,7 @@
 <form class="space-y-6 pt-6" (ngSubmit)="save()">
-  <h2 class="text-center text-2xl font-semibold text-gray-800 mb-6">Nuevo Proceso</h2>
+  <h2 class="text-center text-2xl font-semibold text-gray-800 mb-6">
+    {{ processData ? 'Editar Proceso' : 'Nuevo Proceso' }}
+  </h2>
 
   <div>
     <label class="block text-gray-700 font-medium">Nombre</label>
@@ -31,7 +33,7 @@
       Cancelar
     </button>
     <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
-      Guardar
+      {{ processData ? 'Actualizar' : 'Guardar' }}
     </button>
   </div>
 </form>

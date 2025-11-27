@@ -87,11 +87,15 @@ import { map } from 'rxjs/operators';
 import { Gateway } from '../../../models/Gateway';
 import { GatewayService } from '../../../services/gateway.service';
 import { ActiveProcessService } from '../../../services/active-process.service';
+import { NotificationService } from '../../../services/notification.service';
+import { Exclusive } from '../icons/exclusive/exclusive';
+import { Decision } from '../icons/decision/decision';
+import { Parallel } from '../icons/parallel/parallel';
 
 @Component({
   selector: 'app-gateway-panel',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, Exclusive, Decision, Parallel],
   templateUrl: './gateway-panel.html',
   styleUrls: ['./gateway-panel.css'],
 })
@@ -127,6 +131,7 @@ export class GatewayPanel implements OnInit, OnChanges, OnDestroy {
   private service = inject(GatewayService);
   private activeProcessService = inject(ActiveProcessService);
   private cdr = inject(ChangeDetectorRef);
+  private notificationService = inject(NotificationService);
 
   /**
    * STREAM DE DATOS REACTIVO
@@ -194,9 +199,9 @@ export class GatewayPanel implements OnInit, OnChanges, OnDestroy {
    * - (X): Exclusivo - similar a decisión pero con semántica XOR
    */
   readonly gatewayTypes = [
-    { value: 'decision-gateway', label: 'Decisión (?)' },
-    { value: 'parallel-gateway', label: 'Paralelo (+)' },
-    { value: 'exclusive-gateway', label: 'Exclusivo (X)' },
+    { value: 'decision-gateway', label: 'Decisión', icon: 'decision' },
+    { value: 'parallel-gateway', label: 'Paralelo', icon: 'parallel' },
+    { value: 'exclusive-gateway', label: 'Exclusivo', icon: 'exclusive' },
   ];
 
   /**
@@ -380,14 +385,8 @@ export class GatewayPanel implements OnInit, OnChanges, OnDestroy {
       } else {
         console.error('No hay proceso activo');
         console.error('Solución: Selecciona o crea un proceso desde el menú "Procesos"');
-        alert(
-          'No hay un proceso activo seleccionado\n\n' +
-          'Para crear gateways, primero debes:\n' +
-          '1. Ir al menú "Procesos" (arriba)\n' +
-          '2. Seleccionar un proceso existente\n' +
-          '   O crear uno nuevo\n\n' +
-          'Luego podrás crear gateways en el dashboard.'
-        );
+        console.error('Solución: Selecciona o crea un proceso desde el menú "Procesos"');
+        this.notificationService.showWarning('No hay un proceso activo seleccionado. Por favor selecciona uno primero.');
         return;
       }
     }
@@ -405,7 +404,8 @@ export class GatewayPanel implements OnInit, OnChanges, OnDestroy {
       error: (err) => {
         console.error('[GatewayPanel] Error al crear:', err);
         console.error('Payload enviado:', payload);
-        alert('Error al crear gateway. Verifica la consola para más detalles.');
+        // El interceptor ya maneja el error, pero si queremos ser específicos:
+        // this.notificationService.showError('Error al crear gateway.');
       },
     });
   }
@@ -491,16 +491,20 @@ export class GatewayPanel implements OnInit, OnChanges, OnDestroy {
     if (!current || !current.id) return;
 
     const raw = this.form.getRawValue();
-
     const merged: Gateway = {
       ...current,
-      type: raw.type!,
+      type: raw.type!,      
       status: raw.status!,
       processId: raw.processId ?? undefined,
     };
 
+    console.log('[GatewayPanel] Actualizando gateway:', merged);
+
     this.service.update(merged).subscribe({
-      next: () => this.reset(),
+      next: (updated) => {
+        console.log('[GatewayPanel] Gateway actualizado exitosamente:', updated);
+        this.reset();
+      },
       error: (err) => console.error('[GatewayPanel] Error al actualizar:', err),
     });
   }

@@ -211,18 +211,26 @@ export class GatewayService {
    * - Dashboard: El usuario arrastra un gateway a una nueva posición (actualiza x, y)
    */
   update(updated: Gateway): Observable<Gateway> {
-    return this.http.put<Gateway>(this.httpBaseUrl, updated).pipe(
-      tap(updatedGateway => {
-        const current = this.store.value;
-        const index = current.findIndex(g => g.id === updated.id);
-        if (index !== -1) {
-          const newList = [...current];
-          newList[index] = updatedGateway;
-          this.store.next(newList);
-        }
-      })
-    );
-  }
+  console.log('[GatewayService] Enviando actualización al backend:', updated);
+  
+  return this.http.put<Gateway>(this.httpBaseUrl, updated).pipe(
+    tap(updatedGateway => {
+      console.log('[GatewayService] Backend respondió con:', updatedGateway);
+      
+      const current = this.store.value;
+      const index = current.findIndex(g => g.id === updated.id);
+      
+      if (index !== -1) {
+        const newList = [...current];
+        newList[index] = updatedGateway;
+        this.store.next(newList);  // 🔥 Esto dispara getByProcessId()
+        console.log('[GatewayService] Store actualizado, nuevo state:', newList.map(g => ({ id: g.id, type: g.type })));
+      } else {
+        console.warn('[GatewayService] Gateway no encontrado en store:', updated.id);
+      }
+    })
+  );
+}
 
   updateGateway(id: number, gateway: Gateway): Observable<Gateway> {
     return this.update({ ...gateway, id });
@@ -314,9 +322,12 @@ export class GatewayService {
     });
   }
   // Agregar después del método getCurrentSnapshot()
+  // En gateway.service.ts
   getByProcessId(processId: number): Observable<Gateway[]> {
     return this.list$.pipe(
-      map(gateways => gateways.filter(g => g.process?.id === processId))
+      map(gateways => gateways.filter(g => 
+        g.processId === processId || g.process?.id === processId
+      ))
     );
   }
 

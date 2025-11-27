@@ -1,6 +1,6 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Process } from '../../../models/Process';
+import { BackendProcessResponse } from '../../../models/BackendProcessResponse';
 import { ActiveProcessService } from '../../../services/active-process.service';
 
 @Component({
@@ -12,8 +12,9 @@ import { ActiveProcessService } from '../../../services/active-process.service';
 })
 //comentario
 export class ProcessList {
-  @Input() processes: Process[] = [];
+  @Input() processes: BackendProcessResponse[] = [];
   @Output() onDelete = new EventEmitter<number>();
+  @Output() onEdit = new EventEmitter<BackendProcessResponse>();
 
   constructor(private activeProcessService: ActiveProcessService) { }
 
