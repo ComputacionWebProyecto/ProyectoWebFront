@@ -210,27 +210,35 @@ export class GatewayService {
    * - GatewayPanel: El usuario edita propiedades del gateway y guarda cambios
    * - Dashboard: El usuario arrastra un gateway a una nueva posición (actualiza x, y)
    */
-  update(updated: Gateway): Observable<Gateway> {
-  console.log('[GatewayService] Enviando actualización al backend:', updated);
-  
-  return this.http.put<Gateway>(this.httpBaseUrl, updated).pipe(
-    tap(updatedGateway => {
-      console.log('[GatewayService] Backend respondió con:', updatedGateway);
+    update(updated: Gateway): Observable<Gateway> {
+      console.log('[GatewayService] Enviando actualización al backend:', updated);
+
       
-      const current = this.store.value;
-      const index = current.findIndex(g => g.id === updated.id);
-      
-      if (index !== -1) {
-        const newList = [...current];
-        newList[index] = updatedGateway;
-        this.store.next(newList);  // 🔥 Esto dispara getByProcessId()
-        console.log('[GatewayService] Store actualizado, nuevo state:', newList.map(g => ({ id: g.id, type: g.type })));
-      } else {
-        console.warn('[GatewayService] Gateway no encontrado en store:', updated.id);
-      }
-    })
-  );
-}
+      const payload = {
+        ...updated,
+        processId: updated.processId ?? updated.process?.id
+      };
+
+      console.log('[GatewayService] Payload corregido enviado al backend:', payload);
+
+      return this.http.put<Gateway>(this.httpBaseUrl, payload).pipe(
+        tap(updatedGateway => {
+          console.log('[GatewayService] Backend respondió con:', updatedGateway);
+
+          const current = this.store.value;
+          const index = current.findIndex(g => g.id === updated.id);
+
+          if (index !== -1) {
+            const newList = [...current];
+            newList[index] = updatedGateway;
+            this.store.next(newList);
+          } else {
+            console.warn('[GatewayService] Gateway no encontrado en store:', updated.id);
+          }
+        })
+      );
+    }
+
 
   updateGateway(id: number, gateway: Gateway): Observable<Gateway> {
     return this.update({ ...gateway, id });
