@@ -19,47 +19,7 @@
         class="w-full mb-4 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg">
         + Create new rol
       </button>
-      <!-- Botonera de acciones (H18/H19/H20) -->
-    <div class="flex gap-2 mb-4">
-    <!-- Editar (lapiz) -->
-    <button
-        (click)="enterEditMode()"
-        class="flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition
-            bg-amber-500 hover:bg-amber-600 text-white"
-        [ngClass]="{ 'ring-2 ring-amber-300': mode === 'edit' }">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M15.232 5.232a3 3 0 114.243 4.243L7.5 21H3v-4.5L15.232 5.232z" />
-        </svg>
-        Edit
-    </button>
-
-    <!-- Eliminar (X) -->
-    <button
-        (click)="enterDeleteMode()"
-        class="flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition
-            bg-red-600 hover:bg-red-700 text-white"
-        [ngClass]="{ 'ring-2 ring-red-300': mode === 'delete' }">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M6 18L18 6M6 6l12 12" />
-        </svg>
-        Delete
-    </button>
-
-    <!-- Consultar (lupa) -->
-    <button
-        (click)="enterConsultMode()"
-        class="flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition
-            bg-gray-700 hover:bg-gray-600 text-white"
-        [ngClass]="{ 'ring-2 ring-gray-300': mode === 'consult' }">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M21 21l-4.35-4.35M10 18a8 8 0 110-16 8 8 0 010 16z" />
-        </svg>
-        Consult
-    </button>
-    </div>
+      
 
       <app-role-list
         [roles]="roles"
