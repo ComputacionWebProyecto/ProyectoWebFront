@@ -26,9 +26,10 @@ export class RoleService {
     return this.http.get<Role>(`${this.baseUrl}/${id}`);
   }
 
-  updateRole(id: number, Role: Role): Observable<Role> {
-    return this.http.put<Role>(`${this.baseUrl}/${id}`, Role);
-  }
+  updateRole(id: number, role: Role): Observable<Role> {
+  return this.http.put<Role>(`${this.baseUrl}`, role);
+}
+
 
   deleteRole(id: number): Observable<any> {
     return this.http.delete(`${this.baseUrl}/${id}`);
